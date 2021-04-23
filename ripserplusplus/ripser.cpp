@@ -39,7 +39,6 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
-#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <numeric>
@@ -58,14 +57,6 @@ public:
 #else
 template <class Key, class T, class H, class E>
 class hash_map : public std::unordered_map<Key, T, H, E> {};
-#endif
-
-typedef float value_t;
-typedef int64_t index_t;
-typedef uint16_t coefficient_t;
-
-#ifdef INDICATE_PROGRESS
-static const std::chrono::milliseconds time_step(40);
 #endif
 
 static const std::string clear_line("\r\033[K");
@@ -1004,16 +995,64 @@ void print_usage_and_exit(int exit_code) {
 }
 
 int main(int argc, char** argv) {
-    const char* filename = "2.txt";
+    const char* filename = nullptr;
 
     file_format format = DISTANCE_MATRIX;
 
-    index_t dim_max = 2;
+    index_t dim_max = 1;
     value_t threshold = std::numeric_limits<value_t>::max();
     float ratio = 1;
     coefficient_t modulus = 2;
-    freopen("output2.txt", "w", stdout);
 
+    for (index_t i = 1; i < argc; ++i) {
+        const std::string arg(argv[i]);
+        if (arg == "--help") {
+            print_usage_and_exit(0);
+        } else if (arg == "--dim") {
+            std::string parameter = std::string(argv[++i]);
+            size_t next_pos;
+            dim_max = std::stol(parameter, &next_pos);
+            if (next_pos != parameter.size()) print_usage_and_exit(-1);
+        } else if (arg == "--threshold") {
+            std::string parameter = std::string(argv[++i]);
+            size_t next_pos;
+            threshold = std::stof(parameter, &next_pos);
+            if (next_pos != parameter.size()) print_usage_and_exit(-1);
+        } else if (arg == "--ratio") {
+            std::string parameter = std::string(argv[++i]);
+            size_t next_pos;
+            ratio = std::stof(parameter, &next_pos);
+            if (next_pos != parameter.size()) print_usage_and_exit(-1);
+        } else if (arg == "--format") {
+            std::string parameter = std::string(argv[++i]);
+            if (parameter.rfind("lower", 0) == 0)
+                format = LOWER_DISTANCE_MATRIX;
+            else if (parameter.rfind("upper", 0) == 0)
+                format = UPPER_DISTANCE_MATRIX;
+            else if (parameter.rfind("dist", 0) == 0)
+                format = DISTANCE_MATRIX;
+            else if (parameter.rfind("point", 0) == 0)
+                format = POINT_CLOUD;
+            else if (parameter == "dipha")
+                format = DIPHA;
+            else if (parameter == "sparse")
+                format = SPARSE;
+            else if (parameter == "binary")
+                format = BINARY;
+            else
+                print_usage_and_exit(-1);
+#ifdef USE_COEFFICIENTS
+            } else if (arg == "--modulus") {
+			std::string parameter = std::string(argv[++i]);
+			size_t next_pos;
+			modulus = std::stol(parameter, &next_pos);
+			if (next_pos != parameter.size() || !is_prime(modulus)) print_usage_and_exit(-1);
+#endif
+        } else {
+            if (filename) { print_usage_and_exit(-1); }
+            filename = argv[i];
+        }
+    }
 
     std::ifstream file_stream(filename);
     if (filename && file_stream.fail()) {
@@ -1021,13 +1060,23 @@ int main(int argc, char** argv) {
         exit(-1);
     }
 
+    if (format == SPARSE) {
+        sparse_distance_matrix dist =
+                read_sparse_distance_matrix(filename ? file_stream : std::cin);
+        std::cout << "sparse distance matrix with " << dist.size() << " points and "
+                  << dist.num_edges << "/" << (dist.size() * (dist.size() - 1)) / 2 << " entries"
+                  << std::endl;
+
+        ripser<sparse_distance_matrix>(std::move(dist), dim_max, threshold, ratio, modulus)
+                .compute_barcodes();
+    } else {
         compressed_lower_distance_matrix dist =
                 read_file(filename ? file_stream : std::cin, format);
 
         value_t min = std::numeric_limits<value_t>::infinity(),
                 max = -std::numeric_limits<value_t>::infinity(), max_finite = max;
         int num_edges = 0;
-        unsigned int start_time =  clock();
+
         if (threshold == std::numeric_limits<value_t>::max()) {
             value_t enclosing_radius = std::numeric_limits<value_t>::infinity();
             for (size_t i = 0; i < dist.size(); ++i) {
@@ -1061,7 +1110,6 @@ int main(int argc, char** argv) {
                                            dim_max, threshold, ratio, modulus)
                     .compute_barcodes();
         }
-	unsigned int end_time = clock();
-        std::cout << end_time - start_time << std::endl;
         exit(0);
+    }
 }
