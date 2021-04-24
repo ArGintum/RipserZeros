@@ -1,15 +1,21 @@
 /*
+
  Ripser: a lean C++ code for computation of Vietoris-Rips persistence barcodes
+ 
  MIT License
+ 
  Copyright (c) 2015–2019 Ulrich Bauer
+ 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  copies of the Software, and to permit persons to whom the Software is
  furnished to do so, subject to the following conditions:
+ 
  The above copyright notice and this permission notice shall be included in all
  copies or substantial portions of the Software.
+ 
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -17,6 +23,7 @@
  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.
+ 
  You are under no obligation whatsoever to provide any bug fixes, patches, or
  upgrades to the features, functionality or performance of the source code
  ("Enhancements") to anyone; however, if you choose to make your Enhancements
@@ -26,6 +33,7 @@
  license to install, use, modify, prepare derivative works, incorporate into
  other computer software, distribute, and sublicense such enhancements or
  derivative works thereof, in binary and source code form.
+ 
 */
 
 //#define USE_COEFFICIENTS
@@ -57,6 +65,14 @@ public:
 #else
 template <class Key, class T, class H, class E>
 class hash_map : public std::unordered_map<Key, T, H, E> {};
+#endif
+
+typedef float value_t;
+typedef int64_t index_t;
+typedef uint16_t coefficient_t;
+
+#ifdef INDICATE_PROGRESS
+static const std::chrono::milliseconds time_step(40);
 #endif
 
 static const std::string clear_line("\r\033[K");
@@ -441,8 +457,9 @@ public:
 				}
 #endif
                 auto cofacet = cofacets.next();
-                value_t diam = get_diameter(cofacet);
+		value_t diam = get_diameter(cofacet);
                 if (diam > 0 && diam <= threshold) {
+
                     next_simplices.push_back({diam, get_index(cofacet)});
 
                     if (pivot_column_index.find(get_entry(cofacet)) == pivot_column_index.end())
@@ -559,7 +576,7 @@ public:
         simplex_coboundary_enumerator cofacets(simplex, dim, *this);
         while (cofacets.has_next()) {
             diameter_entry_t cofacet = cofacets.next();
-	        value_t cofacet_diameter = get_diameter(cofacet);
+	    value_t cofacet_diameter = get_diameter(cofacet);
             if (cofacet_diameter > 0 && cofacet_diameter <= threshold) working_coboundary.push(cofacet);
         }
     }
