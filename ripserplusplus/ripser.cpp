@@ -441,12 +441,12 @@ public:
 				}
 #endif
                 auto cofacet = cofacets.next();
-                if (get_diameter(cofacet) <= threshold) {
-
-                    next_simplices.push_back({get_diameter(cofacet), get_index(cofacet)});
+                value_t diam = get_diameter(cofacet);
+                if (diam > 0 && diam <= threshold) {
+                    next_simplices.push_back({diam, get_index(cofacet)});
 
                     if (pivot_column_index.find(get_entry(cofacet)) == pivot_column_index.end())
-                        columns_to_reduce.push_back({get_diameter(cofacet), get_index(cofacet)});
+                        columns_to_reduce.push_back({diam, get_index(cofacet)});
                 }
             }
         }
