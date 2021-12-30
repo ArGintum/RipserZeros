@@ -458,7 +458,7 @@ public:
 #endif
                 auto cofacet = cofacets.next();
 		value_t diam = get_diameter(cofacet);
-                if (diam > 0 && diam <= threshold) {
+                if (diam <= threshold) {
 
                     next_simplices.push_back({diam, get_index(cofacet)});
 
@@ -556,7 +556,7 @@ public:
         while (cofacets.has_next()) {
             diameter_entry_t cofacet = cofacets.next();
             value_t cofacet_diameter = get_diameter(cofacet);
-            if (cofacet_diameter > 0 && cofacet_diameter <= threshold) {
+            if (cofacet_diameter <= threshold) {
                 cofacet_entries.push_back(cofacet);
                 if (check_for_emergent_pair && (get_diameter(simplex) == cofacet_diameter)) {
                     if (pivot_column_index.find(get_entry(cofacet)) == pivot_column_index.end())
@@ -577,7 +577,7 @@ public:
         while (cofacets.has_next()) {
             diameter_entry_t cofacet = cofacets.next();
 	    value_t cofacet_diameter = get_diameter(cofacet);
-            if (cofacet_diameter > 0 && cofacet_diameter <= threshold) working_coboundary.push(cofacet);
+            if (cofacet_diameter <= threshold) working_coboundary.push(cofacet);
         }
     }
 
