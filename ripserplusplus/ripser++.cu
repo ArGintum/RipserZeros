@@ -235,6 +235,9 @@ public:
         assert(n<num_n && k<max_tuple_length);
         return binoms[BINOM_TRANSPOSE(n,k)];
     }
+    ~binomial_coeff_table(){
+        free(binoms);
+    }
 };
 
 typedef std::pair<value_t, index_t> diameter_index_t;
@@ -261,6 +264,11 @@ public:
     CSR_distance_matrix(){}//avoid calling malloc in constructor for GPU side
 
     index_t size(){return n;}
+    ~CSR_distance_matrix(){
+        free(entries);
+        free(offsets);
+        free(col_indices);
+    }
 };
 
 class compressed_lower_distance_matrix {
@@ -296,6 +304,7 @@ public:
     }
 
     size_t size() const { return rows.size(); }
+
 };
 
 struct sparse_distance_matrix {
@@ -326,6 +335,7 @@ struct sparse_distance_matrix {
         }
     }
     size_t size() const { return neighbors.size(); }
+
 private:
     //this should only be called from CPU side
     void append_sparse(CSR_distance_matrix& dist, value_t e, index_t j) {
@@ -1610,44 +1620,45 @@ public:
               ratio(_ratio), binomial_coeff(n, dim_max + 2) {}
 
     void free_gpumem_dense_computation() {
-        if (n>1) {//this fixes a bug for single point persistence being called repeatedly
+        if (n>=10) {//this fixes a bug for single point persistence being called repeatedly
             cudaFree(d_columns_to_reduce);
 #ifndef ASSEMBLE_REDUCTION_SUBMATRIX
             cudaFree(d_flagarray);
 #endif
             cudaFree(d_cidx_to_diameter);
-            if (n > 1) {
+//            if (n >= 10) {
                 cudaFree(d_distance_matrix);
-            }
+//            }
             cudaFree(d_pivot_column_index_OR_nonapparent_cols);
 #ifdef ASSEMBLE_REDUCTION_SUBMATRIX
             cudaFree(d_flagarray_OR_index_to_subindex);
 #endif
-            if (binomial_coeff.get_num_n() * binomial_coeff.get_max_tuple_length() > 0) {
+//            if (binomial_coeff.get_num_n() * binomial_coeff.get_max_tuple_length() > 0) {
                 cudaFree(h_d_binoms);
-            }
+//            }
             cudaFree(d_binomial_coeff);
             cudaFree(d_lowest_one_of_apparent_pair);
             cudaFree(d_pivot_array);
         }
     }
     void free_gpumem_sparse_computation() {
-        if (n > 1) {
+        if (n >= 10) {
             cudaFree(d_columns_to_reduce);
 #ifdef ASSEMBLE_REDUCTION_SUBMATRIX
             cudaFree(d_flagarray_OR_index_to_subindex);
 #endif
-            cudaFree(h_d_offsets);
-            if (CSR_distance_matrix().num_entries > 0) {
+//            if (CSR_distance_matrix .num_entries > 0) {
                 cudaFree(h_d_entries);
-            }
+//            }
+            cudaFree(h_d_offsets);
+
             cudaFree(h_d_col_indices);
             cudaFree(d_CSR_distance_matrix);
             cudaFree(d_cidx_diameter_pairs_sortedlist);
             cudaFree(d_pivot_column_index_OR_nonapparent_cols);
-            if (binomial_coeff.get_num_n() * binomial_coeff.get_max_tuple_length() > 0) {
+            //if (binomial_coeff.get_num_n() * binomial_coeff.get_max_tuple_length() > 0) {
                 cudaFree(h_d_binoms);
-            }
+            //}
             cudaFree(d_binomial_coeff);
             cudaFree(d_lowest_one_of_apparent_pair);
             cudaFree(d_pivot_array);
@@ -1880,25 +1891,15 @@ public:
         struct greaterdiam_lowerindex_diameter_index_t_struct_compare cmp;
 
         std::sort(edges.rbegin(), edges.rend(), cmp);
-
+	index_t mid = n / 2;
         std::vector<index_t> vertices_of_edge(2);
         for (auto e : edges) {
             get_simplex_vertices(e.index, 1, n, vertices_of_edge.rbegin());
             index_t u= dset.find(vertices_of_edge[0]), v= dset.find(vertices_of_edge[1]);
 
             if (u != v) {
-#if defined(PRINT_PERSISTENCE_PAIRS) || defined(PYTHON_BARCODE_COLLECTION)
-                if(e.diameter!=0) {
-#ifdef PRINT_PERSISTENCE_PAIRS
-                    std::cout << " [0," << e.diameter << ")" << std::endl;
-#endif
-                    //Collect persistence pair
-                    birth_death_coordinate barcode = {0,e.diameter};
-                    list_of_barcodes[0].push_back(barcode);
-                }
-#endif
                 dset.link(u, v);
-            } else {
+            } else if (vertices_of_edge[0] >= mid) {
                 columns_to_reduce.push_back(e);
             }
         }
@@ -2386,6 +2387,7 @@ void ripser<compressed_lower_distance_matrix>::gpu_compute_dim_0_pairs(std::vect
 #endif
 
     std::vector<index_t> vertices_of_edge(2);
+    index_t mid = n / 2;
     for(index_t idx=0; idx<*h_num_columns_to_reduce; idx++){
         struct diameter_index_t_struct e= h_columns_to_reduce[idx];
         vertices_of_edge.clear();
@@ -2393,18 +2395,8 @@ void ripser<compressed_lower_distance_matrix>::gpu_compute_dim_0_pairs(std::vect
         index_t u= dset.find(vertices_of_edge[0]), v= dset.find(vertices_of_edge[1]);
 
         if (u != v) {
-#if defined(PRINT_PERSISTENCE_PAIRS) || defined(PYTHON_BARCODE_COLLECTION)
-            //remove paired destroyer columns (we compute cohomology)
-            if(e.diameter!=0) {
-#ifdef PRINT_PERSISTENCE_PAIRS
-                std::cout << " [0," << e.diameter << ")" << std::endl;
-#endif
-                birth_death_coordinate barcode = {0,e.diameter};
-                list_of_barcodes[0].push_back(barcode);
-            }
-#endif
             dset.link(u, v);
-        } else {
+        } else if (vertices_of_edge[0] >= mid) {
             columns_to_reduce.push_back(e);
         }
     }
@@ -2467,7 +2459,7 @@ void ripser<sparse_distance_matrix>::gpu_compute_dim_0_pairs(std::vector<struct 
     std::cout << "persistence intervals in dim 0:" << std::endl;
 #endif
 
-
+    index_t mid = n / 2;
     std::vector<index_t> vertices_of_edge(2);
     for(index_t idx=0; idx<*h_num_simplices; idx++){
         struct diameter_index_t_struct e= h_simplices[idx];
@@ -2476,17 +2468,8 @@ void ripser<sparse_distance_matrix>::gpu_compute_dim_0_pairs(std::vector<struct 
         index_t u= dset.find(vertices_of_edge[0]), v= dset.find(vertices_of_edge[1]);
 
         if (u != v) {
-#if defined(PRINT_PERSISTENCE_PAIRS) || defined(PYTHON_BARCODE_COLLECTION)
-            if(e.diameter!=0) {
-#ifdef PRINT_PERSISTENCE_PAIRS
-                std::cout << " [0," << e.diameter << ")" << std::endl;
-#endif
-                birth_death_coordinate barcode = {0,e.diameter};
-                list_of_barcodes[0].push_back(barcode);
-            }
-#endif
             dset.link(u, v);
-        } else {
+        } else if (vertices_of_edge[0] >= mid) {
             columns_to_reduce.push_back(e);
         }
     }
@@ -3225,115 +3208,147 @@ void ripser<compressed_lower_distance_matrix>::compute_barcodes() {
 #endif
             }
         }
+    }else {
+        if (n >= 10) {
+            free_init_cpumem();
+            free_remaining_cpumem();
+        }
     }
-    free_gpumem_dense_computation();
+    if(gpu_dim_max>=1 && n>=10) {
+        free_gpumem_dense_computation();
+//        free CPU memory:
+
+        cudaFreeHost(h_num_columns_to_reduce);
+        cudaFreeHost(h_num_nonapparent);
+        //free(h_pivot_array)
+        //free(h_columns_to_reduce)
+        //free(h_pivot_column_index_array_OR_nonapparent_cols)
+#if defined(ASSEMBLE_REDUCTION_SUBMATRIX)
+        free(h_flagarray_OR_index_to_subindex);
+#endif
+    }
 }
 
 template <>
-void ripser<sparse_distance_matrix>::compute_barcodes(){
+void ripser<sparse_distance_matrix>::compute_barcodes() {
     Stopwatch sw, gpu_accel_timer;
     gpu_accel_timer.start();
     sw.start();
 
-    index_t maxgpu_dim= calculate_gpu_dim_max_for_fullrips_computation_from_memory(dim_max, false);
-    if(maxgpu_dim<dim_max){
-        max_num_simplices_forall_dims= calculate_gpu_max_columns_for_sparserips_computation_from_memory();
+    index_t maxgpu_dim = calculate_gpu_dim_max_for_fullrips_computation_from_memory(dim_max, false);
+    if (maxgpu_dim < dim_max) {
+        max_num_simplices_forall_dims = calculate_gpu_max_columns_for_sparserips_computation_from_memory();
 #ifdef COUNTING
         std::cerr<<"(sparse) max possible num simplices for memory allocation forall dims: "<<max_num_simplices_forall_dims<<std::endl;
 #endif
-    }else {
+    } else {
         max_num_simplices_forall_dims =
-                dim_max < (n/2)-1 ? get_num_simplices_for_dim(dim_max) : get_num_simplices_for_dim((n/2)-1);
+                dim_max < (n / 2) - 1 ? get_num_simplices_for_dim(dim_max) : get_num_simplices_for_dim((n / 2) - 1);
 #ifdef COUNTING
         std::cerr<<"(dense case used in sparse computation) max possible num simplices for memory allocation forall dims: "<<max_num_simplices_forall_dims<<std::endl;
 #endif
     }
 
     //we assume that we have enough memory to last up to dim_max (should be fine with a >=32GB GPU); growth of num simplices can be very slow for sparse case
-    if(dim_max>=1) {
+    if (dim_max >= 1) {
 
-        CUDACHECK(cudaMalloc((void **) &d_columns_to_reduce, sizeof(struct diameter_index_t_struct) * max_num_simplices_forall_dims));//46000000
-        h_columns_to_reduce= (struct diameter_index_t_struct*) malloc(sizeof(struct diameter_index_t_struct)* max_num_simplices_forall_dims);
+        CUDACHECK(cudaMalloc((void **) &d_columns_to_reduce,
+                             sizeof(struct diameter_index_t_struct) * max_num_simplices_forall_dims));//46000000
+        h_columns_to_reduce = (struct diameter_index_t_struct *) malloc(
+                sizeof(struct diameter_index_t_struct) * max_num_simplices_forall_dims);
 
-        if(h_columns_to_reduce==NULL){
-            std::cerr<<"malloc for h_columns_to_reduce failed"<<std::endl;
+        if (h_columns_to_reduce == NULL) {
+            std::cerr << "malloc for h_columns_to_reduce failed" << std::endl;
             exit(1);
         }
 
 #if defined(ASSEMBLE_REDUCTION_SUBMATRIX)
-        CUDACHECK(cudaMalloc((void **) &d_flagarray_OR_index_to_subindex, sizeof(index_t)*max_num_simplices_forall_dims));
+        CUDACHECK(cudaMalloc((void **) &d_flagarray_OR_index_to_subindex,
+                             sizeof(index_t) * max_num_simplices_forall_dims));
 
-        h_flagarray_OR_index_to_subindex= (index_t*) malloc(sizeof(index_t)*max_num_simplices_forall_dims);
-        if(h_flagarray_OR_index_to_subindex==NULL) {
-            std::cerr<<"malloc for h_index_to_subindex failed"<<std::endl;
+        h_flagarray_OR_index_to_subindex = (index_t *) malloc(sizeof(index_t) * max_num_simplices_forall_dims);
+        if (h_flagarray_OR_index_to_subindex == NULL) {
+            std::cerr << "malloc for h_index_to_subindex failed" << std::endl;
         }
 #endif
 
-        CSR_distance_matrix CSR_distance_matrix= dist.toCSR();
+        CSR_distance_matrix CSR_distance_matrix = dist.toCSR();
         //copy CSR_distance_matrix object over to GPU
         CUDACHECK(cudaMalloc((void **) &d_CSR_distance_matrix, sizeof(CSR_distance_matrix)));
         cudaMemcpy(d_CSR_distance_matrix, &CSR_distance_matrix, sizeof(CSR_distance_matrix), cudaMemcpyHostToDevice);
 
         CUDACHECK(cudaMalloc((void **) &h_d_offsets, sizeof(index_t) * (CSR_distance_matrix.n + 1)));
-        cudaMemcpy(h_d_offsets, CSR_distance_matrix.offsets, sizeof(index_t) * (CSR_distance_matrix.n + 1), cudaMemcpyHostToDevice);
+        cudaMemcpy(h_d_offsets, CSR_distance_matrix.offsets, sizeof(index_t) * (CSR_distance_matrix.n + 1),
+                   cudaMemcpyHostToDevice);
         cudaMemcpy(&(d_CSR_distance_matrix->offsets), &h_d_offsets, sizeof(index_t *), cudaMemcpyHostToDevice);
 
         CUDACHECK(cudaMalloc((void **) &h_d_entries, sizeof(value_t) * CSR_distance_matrix.num_entries));
-        cudaMemcpy(h_d_entries, CSR_distance_matrix.entries, sizeof(value_t) * CSR_distance_matrix.num_entries, cudaMemcpyHostToDevice);
+        cudaMemcpy(h_d_entries, CSR_distance_matrix.entries, sizeof(value_t) * CSR_distance_matrix.num_entries,
+                   cudaMemcpyHostToDevice);
         cudaMemcpy(&(d_CSR_distance_matrix->entries), &h_d_entries, sizeof(value_t *), cudaMemcpyHostToDevice);
 
         CUDACHECK(cudaMalloc((void **) &h_d_col_indices, sizeof(index_t) * CSR_distance_matrix.num_entries));
-        cudaMemcpy(h_d_col_indices, CSR_distance_matrix.col_indices, sizeof(index_t) * CSR_distance_matrix.num_entries,
+        cudaMemcpy(h_d_col_indices, CSR_distance_matrix .col_indices, sizeof(index_t) * CSR_distance_matrix .num_entries,
                    cudaMemcpyHostToDevice);
+        
         cudaMemcpy(&(d_CSR_distance_matrix->col_indices), &h_d_col_indices, sizeof(index_t *), cudaMemcpyHostToDevice);
 
         //this replaces d_cidx_to_diameter
-        CUDACHECK(cudaMalloc((void **) &d_cidx_diameter_pairs_sortedlist, sizeof(struct diameter_index_t_struct)*max_num_simplices_forall_dims));
+        CUDACHECK(cudaMalloc((void **) &d_cidx_diameter_pairs_sortedlist,
+                             sizeof(struct diameter_index_t_struct) * max_num_simplices_forall_dims));
 
-        CUDACHECK(cudaMalloc((void **) &d_pivot_column_index_OR_nonapparent_cols, sizeof(index_t)*max_num_simplices_forall_dims));
+        CUDACHECK(cudaMalloc((void **) &d_pivot_column_index_OR_nonapparent_cols,
+                             sizeof(index_t) * max_num_simplices_forall_dims));
 
         //this array is used for both the pivot column index hash table array as well as the nonapparent cols array as an unstructured hashmap
-        h_pivot_column_index_array_OR_nonapparent_cols= (index_t*) malloc(sizeof(index_t)*max_num_simplices_forall_dims);
-        if(h_pivot_column_index_array_OR_nonapparent_cols==NULL){
-            std::cerr<<"malloc for h_pivot_column_index_array_OR_nonapparent_cols failed"<<std::endl;
+        h_pivot_column_index_array_OR_nonapparent_cols = (index_t *) malloc(
+                sizeof(index_t) * max_num_simplices_forall_dims);
+        if (h_pivot_column_index_array_OR_nonapparent_cols == NULL) {
+            std::cerr << "malloc for h_pivot_column_index_array_OR_nonapparent_cols failed" << std::endl;
             exit(1);
         }
 
         //copy object over to GPU
-        CUDACHECK(cudaMalloc((void**) &d_binomial_coeff, sizeof(binomial_coeff_table)));
+        CUDACHECK(cudaMalloc((void **) &d_binomial_coeff, sizeof(binomial_coeff_table)));
         cudaMemcpy(d_binomial_coeff, &binomial_coeff, sizeof(binomial_coeff_table), cudaMemcpyHostToDevice);
 
-        index_t num_binoms= binomial_coeff.get_num_n()*binomial_coeff.get_max_tuple_length();
+        index_t num_binoms = binomial_coeff.get_num_n() * binomial_coeff.get_max_tuple_length();
 
-        CUDACHECK(cudaMalloc((void **) &h_d_binoms, sizeof(index_t)*num_binoms));
-        cudaMemcpy(h_d_binoms, binomial_coeff.binoms, sizeof(index_t)*num_binoms, cudaMemcpyHostToDevice);
-        cudaMemcpy(&(d_binomial_coeff->binoms), &h_d_binoms, sizeof(index_t*), cudaMemcpyHostToDevice);
+        CUDACHECK(cudaMalloc((void **) &h_d_binoms, sizeof(index_t) * num_binoms));
+        cudaMemcpy(h_d_binoms, binomial_coeff.binoms, sizeof(index_t) * num_binoms, cudaMemcpyHostToDevice);
+        cudaMemcpy(&(d_binomial_coeff->binoms), &h_d_binoms, sizeof(index_t *), cudaMemcpyHostToDevice);
 
-        cudaHostAlloc((void **)&h_num_columns_to_reduce, sizeof(index_t), cudaHostAllocPortable | cudaHostAllocMapped);
-        cudaHostGetDevicePointer(&d_num_columns_to_reduce, h_num_columns_to_reduce,0);
-        cudaHostAlloc((void **)&h_num_nonapparent, sizeof(index_t), cudaHostAllocPortable | cudaHostAllocMapped);
-        cudaHostGetDevicePointer(&d_num_nonapparent, h_num_nonapparent,0);
-        cudaHostAlloc((void **)&h_num_simplices, sizeof(index_t), cudaHostAllocPortable | cudaHostAllocMapped);
-        cudaHostGetDevicePointer(&d_num_simplices, h_num_simplices,0);
+        cudaHostAlloc((void **) &h_num_columns_to_reduce, sizeof(index_t), cudaHostAllocPortable | cudaHostAllocMapped);
+        cudaHostGetDevicePointer(&d_num_columns_to_reduce, h_num_columns_to_reduce, 0);
+        cudaHostAlloc((void **) &h_num_nonapparent, sizeof(index_t), cudaHostAllocPortable | cudaHostAllocMapped);
+        cudaHostGetDevicePointer(&d_num_nonapparent, h_num_nonapparent, 0);
+        cudaHostAlloc((void **) &h_num_simplices, sizeof(index_t), cudaHostAllocPortable | cudaHostAllocMapped);
+        cudaHostGetDevicePointer(&d_num_simplices, h_num_simplices, 0);
 
-        CUDACHECK(cudaMalloc((void**) &d_lowest_one_of_apparent_pair, sizeof(index_t)*max_num_simplices_forall_dims));
-        CUDACHECK(cudaMalloc((void**) &d_pivot_array, sizeof(struct index_t_pair_struct)*max_num_simplices_forall_dims));
-        h_pivot_array= (struct index_t_pair_struct*) malloc(sizeof(struct index_t_pair_struct)*max_num_simplices_forall_dims);
-        if(h_pivot_array==NULL){
-            std::cerr<<"malloc for h_pivot_array failed"<<std::endl;
+        CUDACHECK(
+                cudaMalloc((void **) &d_lowest_one_of_apparent_pair, sizeof(index_t) * max_num_simplices_forall_dims));
+        CUDACHECK(cudaMalloc((void **) &d_pivot_array,
+                             sizeof(struct index_t_pair_struct) * max_num_simplices_forall_dims));
+        h_pivot_array = (struct index_t_pair_struct *) malloc(
+                sizeof(struct index_t_pair_struct) * max_num_simplices_forall_dims);
+        if (h_pivot_array == NULL) {
+            std::cerr << "malloc for h_pivot_array failed" << std::endl;
             exit(1);
         }
-        CUDACHECK(cudaMalloc((void**) &d_simplices, sizeof(struct diameter_index_t_struct)*max_num_simplices_forall_dims));
-        h_simplices= (struct diameter_index_t_struct*) malloc(sizeof(struct diameter_index_t_struct)*max_num_simplices_forall_dims);
+        CUDACHECK(cudaMalloc((void **) &d_simplices,
+                             sizeof(struct diameter_index_t_struct) * max_num_simplices_forall_dims));
+        h_simplices = (struct diameter_index_t_struct *) malloc(
+                sizeof(struct diameter_index_t_struct) * max_num_simplices_forall_dims);
 
-        if(h_simplices==NULL){
-            std::cerr<<"malloc for h_simplices failed"<<std::endl;
+        if (h_simplices == NULL) {
+            std::cerr << "malloc for h_simplices failed" << std::endl;
             exit(1);
         }
 #ifdef PROFILING
         cudaMemGetInfo(&freeMem,&totalMem);
         std::cerr<<"after GPU memory allocation: total mem, free mem: " <<totalMem<<" bytes, "<<freeMem<<" bytes"<<std::endl;
 #endif
+
     }
     sw.stop();
 #ifdef PROFILING
@@ -3342,14 +3357,14 @@ void ripser<sparse_distance_matrix>::compute_barcodes(){
     sw.start();
 
     columns_to_reduce.clear();
-    if(dim_max>=1) {
+    if (dim_max >= 1) {
 
         gpu_compute_dim_0_pairs(columns_to_reduce);
         sw.stop();
 #ifdef PROFILING
         std::cerr<<"0-dimensional persistence total computation time with GPU: "<<sw.ms()/1000.0<<"s"<<std::endl;
 #endif
-    }else{
+    } else {
         std::vector<diameter_index_t_struct> simplices;
         compute_dim_0_pairs(simplices, columns_to_reduce);
         sw.stop();
@@ -3359,8 +3374,8 @@ void ripser<sparse_distance_matrix>::compute_barcodes(){
     }
 
     //index_t dim_forgpuscan= MAX_INT64;//never do gpuscan
-    index_t dim_forgpuscan= 1;
-    for (index_t dim= 1; dim <= dim_max; ++dim) {
+    index_t dim_forgpuscan = 1;
+    for (index_t dim = 1; dim <= dim_max; ++dim) {
         Stopwatch sw;
         sw.start();
 #ifdef USE_PHASHMAP
@@ -3370,7 +3385,7 @@ void ripser<sparse_distance_matrix>::compute_barcodes(){
         pivot_column_index.clear();
             pivot_column_index.resize(*h_num_columns_to_reduce);
 #endif
-        *h_num_nonapparent= 0;
+        *h_num_nonapparent = 0;
 
         gpuscan(dim);
         //dim_forgpuscan= dim;
@@ -3404,9 +3419,24 @@ void ripser<sparse_distance_matrix>::compute_barcodes(){
 #ifdef PROFILING
     std::cerr<<"GPU ACCELERATED COMPUTATION: "<<gpu_accel_timer.ms()/1000.0<<"s"<<std::endl;
 #endif
-    free_gpumem_sparse_computation();
-}
 
+    if (maxgpu_dim >= 1 && n>=10) {
+        free_init_cpumem();
+        free_remaining_cpumem();
+        free_gpumem_sparse_computation();
+
+        cudaFreeHost(h_num_columns_to_reduce);
+        cudaFreeHost(h_num_nonapparent);
+        //free(h_pivot_array)
+        //free(h_columns_to_reduce)
+        //free(h_pivot_column_index_array_OR_nonapparent_cols)
+#if defined(ASSEMBLE_REDUCTION_SUBMATRIX)
+        free(h_flagarray_OR_index_to_subindex);
+#endif
+        cudaFreeHost(h_num_simplices);
+        free(h_simplices);
+    }
+}
 ///I/O code
 
 enum file_format { LOWER_DISTANCE_MATRIX, DISTANCE_MATRIX, POINT_CLOUD, DIPHA, SPARSE, BINARY };
@@ -3490,8 +3520,8 @@ sparse_distance_matrix read_sparse_distance_matrix(std::istream& input_stream) {
         s >> value;
         if (i != j) {
             neighbors.resize(std::max({neighbors.size(), i + 1, j + 1}));
-            neighbors[i].push_back({j, value});
-            neighbors[j].push_back({i, value});
+            neighbors[i].push_back({(index_t) j, value});
+            neighbors[j].push_back({(index_t) i, value});
             ++num_edges;
         }
     }
@@ -3515,8 +3545,8 @@ sparse_distance_matrix read_sparse_distance_matrix_python(value_t* matrix, int m
         value = matrix[k+2];
         if (i != j) {
             neighbors.resize(std::max({neighbors.size(), i + 1, j + 1}));
-            neighbors[i].push_back({j, value});
-            neighbors[j].push_back({i, value});
+            neighbors[i].push_back({(index_t) j, value});
+            neighbors[j].push_back({(index_t) i, value});
             ++num_edges;
         }
     }
@@ -3820,7 +3850,7 @@ extern "C" ripser_plusplus_result run_main_filename(int argc,  char** argv, cons
         collected_barcodes[i] = {j,barcode_array};
     }
 
-    res = {dim_max + 1,collected_barcodes};
+    res = {(int)(dim_max + 1),collected_barcodes};
 
     return res;
 }
@@ -3983,7 +4013,7 @@ extern "C" ripser_plusplus_result run_main(int argc, char** argv, value_t* matri
         collected_barcodes[i] = {j,barcode_array};
     }
 
-    res = {dim_max + 1,collected_barcodes};
+    res = {(int)(dim_max + 1),collected_barcodes};
 
     return res;
 }
