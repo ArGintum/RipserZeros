@@ -505,7 +505,7 @@ public:
                     std::cout << " [0," << get_diameter(e) << ")" << std::endl;
 #endif
                 dset.link(u, v);
-            } else if (vertices_of_edge[1] >= mid)
+            } else if (vertices_of_edge[0] >= mid)
                 columns_to_reduce.push_back(e);
         }
         std::reverse(columns_to_reduce.begin(), columns_to_reduce.end());
