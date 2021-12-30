@@ -1923,7 +1923,7 @@ public:
         simplex_coboundary_enumerator cofacets(simplex, dim, *this);
         while (cofacets.has_next()) {
             diameter_index_t_struct cofacet= cofacets.next();
-            if (cofacet.diameter <= threshold) {
+            if (cofacet.diameter > 0 && cofacet.diameter <= threshold) {
                 cofacet_entries.push_back(cofacet);
                 if (check_for_emergent_pair && (simplex.diameter == cofacet.diameter)) {
                     if (pivot_column_index.find(cofacet.index) == pivot_column_index.end()){
@@ -1945,7 +1945,7 @@ public:
         simplex_coboundary_enumerator cofacets(simplex, dim, *this);
         while (cofacets.has_next()) {
             diameter_index_t_struct cofacet= cofacets.next();
-            if (cofacet.diameter <= threshold) {
+            if (cofacet.diameter > 0 && cofacet.diameter <= threshold) {
                 cofacet_entries.push_back(cofacet);
                 if (check_for_emergent_pair && (simplex.diameter == cofacet.diameter)) {
                     if(get_value_pivot_array_hashmap(cofacet.index, cmp)==-1) {
@@ -1965,7 +1965,7 @@ public:
         simplex_coboundary_enumerator cofacets(simplex, dim, *this);
         while (cofacets.has_next()) {
             diameter_index_t_struct cofacet= cofacets.next();
-            if (cofacet.diameter <= threshold) working_coboundary.push(cofacet);
+            if (cofacet.diameter > 0 && cofacet.diameter <= threshold) working_coboundary.push(cofacet);
         }
     }
 
@@ -1976,7 +1976,7 @@ public:
         simplex_coboundary_enumerator cofacets(simplex, dim, *this);
         while (cofacets.has_next()) {
             diameter_index_t_struct cofacet= cofacets.next();
-            if (cofacet.diameter <= threshold) working_coboundary.push(cofacet);
+            if (cofacet.diameter > 0 && cofacet.diameter <= threshold) working_coboundary.push(cofacet);
         }
     }
 
@@ -2821,7 +2821,7 @@ void ripser<compressed_lower_distance_matrix>::cpu_byneighbor_assemble_columns_t
                    }
 #endif
             auto cofacet= cofacets.next();
-            if (cofacet.diameter <= threshold) {
+            if (cofacet.diameter > 0 && cofacet.diameter <= threshold) {
 
                 next_simplices.push_back(cofacet);
 
@@ -2873,7 +2873,7 @@ void ripser<sparse_distance_matrix>::cpu_byneighbor_assemble_columns_to_reduce(s
                    }
 #endif
             auto cofacet= cofacets.next();
-            if (cofacet.diameter <= threshold) {
+            if (cofacet.diameter > 0 && cofacet.diameter <= threshold) {
 
                 next_simplices.push_back(cofacet);
 
