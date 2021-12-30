@@ -494,6 +494,7 @@ public:
         std::sort(edges.rbegin(), edges.rend(),
                   greater_diameter_or_smaller_index<diameter_index_t>());
         std::vector<index_t> vertices_of_edge(2);
+	index_t mid = n / 2;
         for (auto e : edges) {
             get_simplex_vertices(get_index(e), 1, n, vertices_of_edge.rbegin());
             index_t u = dset.find(vertices_of_edge[0]), v = dset.find(vertices_of_edge[1]);
@@ -504,7 +505,7 @@ public:
                     std::cout << " [0," << get_diameter(e) << ")" << std::endl;
 #endif
                 dset.link(u, v);
-            } else if (get_diameter(e) != 0)
+            } else if (vertices_of_edge[0] >= mid)
                 columns_to_reduce.push_back(e);
         }
         std::reverse(columns_to_reduce.begin(), columns_to_reduce.end());
