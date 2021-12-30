@@ -1899,7 +1899,7 @@ public:
 
             if (u != v) {
                 dset.link(u, v);
-            } else if (vert ices_of_edge[0] >= mid || vertices_of_edge[1] >= mid) {
+            } else if (vertices_of_edge[0] >= mid || vertices_of_edge[1] >= mid) {
                 columns_to_reduce.push_back(e);
             }
         }
@@ -2396,7 +2396,7 @@ void ripser<compressed_lower_distance_matrix>::gpu_compute_dim_0_pairs(std::vect
 
         if (u != v) {
             dset.link(u, v);
-        } else if (vert ices_of_edge[0] >= mid || vertices_of_edge[1] >= mid >= mid) {
+        } else if (vertices_of_edge[0] >= mid || vertices_of_edge[1] >= mid) {
             columns_to_reduce.push_back(e);
         }
     }
@@ -2469,7 +2469,7 @@ void ripser<sparse_distance_matrix>::gpu_compute_dim_0_pairs(std::vector<struct 
 
         if (u != v) {
             dset.link(u, v);
-        } else if (vertic es_of_edge[0] >= mid || vertices_of_edge[1] >= mid) {
+        } else if (vertices_of_edge[0] >= mid || vertices_of_edge[1] >= mid) {
             columns_to_reduce.push_back(e);
         }
     }
