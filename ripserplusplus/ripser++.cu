@@ -164,14 +164,20 @@ typedef struct{
     birth_death_coordinate* barcodes;
 } set_of_barcodes;
 typedef struct{
+    index_t num_barcodes;
+    std::pair<std::vector<index_t>, std::vector<index_t>>* simplex_pair;
+} set_of_simplex_pairs;
+typedef struct{
     int num_dimensions;
     set_of_barcodes* all_barcodes;
+    set_of_simplex_pairs* all_simpleces;
 } ripser_plusplus_result;
 
 ripser_plusplus_result res;
 
 
 std::vector<std::vector<birth_death_coordinate>> list_of_barcodes = std::vector<std::vector<birth_death_coordinate>>();
+std::vector<std::vector<std::pair<std::vector<index_t>, std::vector<index_t>> >> list_of_barcodes_simplices = std::vector<std::vector<std::pair<std::vector<index_t>, std::vector<index_t>> >>();
 
 struct row_cidx_column_idx_struct_compare{
     __host__ __device__ bool operator()(struct index_t_pair_struct a, struct index_t_pair_struct b){
@@ -2017,6 +2023,8 @@ public:
 #ifdef PRINT_PERSISTENCE_PAIRS
         std::cout << "persistence intervals in dim " << dim << ":" << std::endl;
 #endif
+	std::vector<index_t> birth_verices(dim + 1);
+        std::vector<index_t> death_verices(dim + 2);
 #ifdef CPUONLY_ASSEMBLE_REDUCTION_MATRIX
         compressed_sparse_matrix<diameter_index_t_struct> reduction_matrix;
 #endif
@@ -2076,7 +2084,11 @@ public:
                                       << std::flush;
 #endif
                             birth_death_coordinate barcode = {diameter,death};
-                            list_of_barcodes[dim].push_back(barcode);
+		            list_of_barcodes[dim].push_back(barcode);
+
+			    get_simplex_vertices(column_to_reduce.index, dim, n, birth_verices.rbegin());
+                            get_simplex_vertices(pivot.index, dim + 1, n, death_verices.rbegin());
+                    	    list_of_barcodes_simplices[dim].push_back({birth_verices, death_verices});
                         }
 #endif
                         pivot_column_index[pivot.index]= index_column_to_reduce;
@@ -2108,6 +2120,9 @@ public:
 #endif
         struct row_cidx_column_idx_struct_compare cmp_pivots;
         index_t num_columns_to_iterate= *h_num_columns_to_reduce;
+	std::vector<index_t> birth_verices(dim + 1);
+        std::vector<index_t> death_verices(dim + 2);
+
         if(dim>=gpuscan_startingdim){
             num_columns_to_iterate= *h_num_nonapparent;
         }
@@ -2175,6 +2190,10 @@ public:
 #endif
                             birth_death_coordinate barcode = {diameter,death};
                             list_of_barcodes[dim].push_back(barcode);
+				
+			    get_simplex_vertices(column_to_reduce.index, dim, n, birth_verices.rbegin());
+                            get_simplex_vertices(pivot.index, dim + 1, n, death_verices.rbegin());
+                    	    list_of_barcodes_simplices[dim].push_back({birth_verices, death_verices});
                         }
 #endif
 
@@ -3752,8 +3771,10 @@ extern "C" ripser_plusplus_result run_main_filename(int argc,  char** argv, cons
     }
 
     list_of_barcodes = std::vector<std::vector<birth_death_coordinate>>();
+    list_of_barcodes_simplices = std::vector<std::vector<std::pair<std::vector<index_t>, std::vector<index_t>> >>();
     for(index_t i = 0; i <= dim_max; i++){
         list_of_barcodes.push_back(std::vector<birth_death_coordinate>());
+	list_of_barcodes_simplices.push_back(std::vector<std::pair<std::vector<index_t>, std::vector<index_t>> >);
     }
 
     std::ifstream file_stream(filename);
@@ -3840,17 +3861,22 @@ extern "C" ripser_plusplus_result run_main_filename(int argc,  char** argv, cons
 #endif
 
     set_of_barcodes* collected_barcodes = (set_of_barcodes*)malloc(sizeof(set_of_barcodes) * list_of_barcodes.size());
+    set_of_simplex_pairs* collected_simpairs = (set_of_simplex_pairs*)malloc(sizeof(set_of_simplex_pairs) * list_of_barcodes_simplices.size());
+
     for(index_t i = 0; i < list_of_barcodes.size();i++){
         birth_death_coordinate* barcode_array = (birth_death_coordinate*)malloc(sizeof(birth_death_coordinate) * list_of_barcodes[i].size());
+        std::pair<std::vector<index_t>, std::vector<index_t>>* simpairs_array = (std::pair<std::vector<index_t>, std::vector<index_t>>*)malloc(sizeof(std::pair<std::vector<index_t>, std::vector<index_t>>) * list_of_barcodes_simplices[i].size());
 
         index_t j;
         for(j = 0; j < list_of_barcodes[i].size(); j++){
             barcode_array[j] = list_of_barcodes[i][j];
+	    simpairs_array[j] = list_of_barcodes_simplices[i][j];
         }
-        collected_barcodes[i] = {j,barcode_array};
+        collected_barcodes[i] = {j, barcode_array};
+	collected_simpairs[i] = {j, simpairs_array};
     }
 
-    res = {(int)(dim_max + 1),collected_barcodes};
+    res = {(int)(dim_max + 1),collected_barcodes, collected_simpairs};
 
     return res;
 }
@@ -3919,8 +3945,10 @@ extern "C" ripser_plusplus_result run_main(int argc, char** argv, value_t* matri
     }
 
     list_of_barcodes = std::vector<std::vector<birth_death_coordinate>>();
+    list_of_barcodes_simplices = std::vector<std::vector<std::pair<std::vector<index_t>, std::vector<index_t>>>>();
     for(index_t i = 0; i <= dim_max; i++){
         list_of_barcodes.push_back(std::vector<birth_death_coordinate>());
+	list_of_barcodes_simplices.push_back(std::vector<std::pair<std::vector<index_t>, std::vector<index_t>>>());
     }
 
     if (format == SPARSE) {//this branch is currently unsupported in run_main, see run_main_filename() instead
@@ -4003,17 +4031,22 @@ extern "C" ripser_plusplus_result run_main(int argc, char** argv, value_t* matri
 #endif
 
     set_of_barcodes* collected_barcodes = (set_of_barcodes*)malloc(sizeof(set_of_barcodes) * list_of_barcodes.size());
+    set_of_simplex_pairs* collected_simpairs = (set_of_simplex_pairs*)malloc(sizeof(set_of_simplex_pairs) * list_of_barcodes_simplices.size());
+
     for(index_t i = 0; i < list_of_barcodes.size();i++){
         birth_death_coordinate* barcode_array = (birth_death_coordinate*)malloc(sizeof(birth_death_coordinate) * list_of_barcodes[i].size());
+        std::pair<std::vector<index_t>, std::vector<index_t>>* simpairs_array = (std::pair<std::vector<index_t>, std::vector<index_t>>*)malloc(sizeof(std::pair<std::vector<index_t>, std::vector<index_t>>) * list_of_barcodes_simplices[i].size());
 
         index_t j;
         for(j = 0; j < list_of_barcodes[i].size(); j++){
             barcode_array[j] = list_of_barcodes[i][j];
+	    simpairs_array[j] = list_of_barcodes_simplices[i][j];
         }
-        collected_barcodes[i] = {j,barcode_array};
+        collected_barcodes[i] = {j, barcode_array};
+	collected_simpairs[i] = {j, simpairs_array};
     }
 
-    res = {(int)(dim_max + 1),collected_barcodes};
+    res = {(int)(dim_max + 1),collected_barcodes, collected_simpairs};
 
     return res;
 }
@@ -4083,8 +4116,10 @@ int main(int argc, char** argv) {
     }
 
     list_of_barcodes = std::vector<std::vector<birth_death_coordinate>>();
+    list_of_barcodes_simplices = std::vector<std::vector<std::pair<std::vector<index_t>, std::vector<index_t>>>>();
     for(index_t i = 0; i <= dim_max; i++){
         list_of_barcodes.push_back(std::vector<birth_death_coordinate>());
+	list_of_barcodes_simplices.push_back(std::vector<std::pair<std::vector<index_t>, std::vector<index_t>>>());
     }
 
     std::ifstream file_stream(filename);
