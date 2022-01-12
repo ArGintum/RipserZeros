@@ -3774,7 +3774,7 @@ extern "C" ripser_plusplus_result run_main_filename(int argc,  char** argv, cons
     list_of_barcodes_simplices = std::vector<std::vector<std::pair<std::vector<index_t>, std::vector<index_t>> >>();
     for(index_t i = 0; i <= dim_max; i++){
         list_of_barcodes.push_back(std::vector<birth_death_coordinate>());
-	list_of_barcodes_simplices.push_back(std::vector<std::pair<std::vector<index_t>, std::vector<index_t>> >);
+	list_of_barcodes_simplices.push_back(std::vector<std::pair<std::vector<index_t>, std::vector<index_t>> >());
     }
 
     std::ifstream file_stream(filename);
