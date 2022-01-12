@@ -116,9 +116,9 @@ def Ripser_plusplus_Converter(prog, arguments, file_name, file_format, user_matr
 
             for dim in range(res.num_dimensions):
                 barcodes_dict[dim] = np.array([np.array(res.set_of_barcodes[dim].barcodes[coord]) for coord in range(res.set_of_barcodes[dim].num_barcodes)])
-                simplexes_dict[dim] = [[np.array([res.set_of_pairs[i].barcodes[simp].birth[coord] for coord in range(res.set_of_pairs[i].barcodes[simp].dim + 1)]),
-                                       np.array([res.set_of_pairs[i].barcodes[simp].death[coord] for coord in range(res.set_of_pairs[i].barcodes[simp].dim + 2)])]
-                                       for simp in range(res.set_of_pairs[i].num_barcodes)]
+                simplexes_dict[dim] = [[np.array([res.set_of_pairs[dim].barcodes[simp].birth[coord] for coord in range(res.set_of_pairs[dim].barcodes[simp].dim + 1)]),
+                                       np.array([res.set_of_pairs[dim].barcodes[simp].death[coord] for coord in range(res.set_of_pairs[dim].barcodes[simp].dim + 2)])]
+                                       for simp in range(res.set_of_pairs[dim].num_barcodes)]
             return {'dgms': barcodes_dict, 'pairs': simplexes_dict}
             
         else:
@@ -180,9 +180,9 @@ def Ripser_plusplus_Converter(prog, arguments, file_name, file_format, user_matr
 
         for dim in range(res.num_dimensions):
             barcodes_dict[dim] = np.array([np.array(res.set_of_barcodes[dim].barcodes[coord]) for coord in range(res.set_of_barcodes[dim].num_barcodes)])
-            simplexes_dict[dim] = [[np.array([res.set_of_pairs[i].barcodes[simp].birth[coord] for coord in range(res.set_of_pairs[i].barcodes[simp].dim + 1)]),
-                                   np.array([res.set_of_pairs[i].barcodes[simp].death[coord] for coord in range(res.set_of_pairs[i].barcodes[simp].dim + 2)])]
-                                   for simp in range(res.set_of_pairs[i].num_barcodes)]
+            simplexes_dict[dim] = [[np.array([res.set_of_pairs[dim].barcodes[simp].birth[coord] for coord in range(res.set_of_pairs[dim].barcodes[simp].dim + 1)]),
+                                   np.array([res.set_of_pairs[dim].barcodes[simp].death[coord] for coord in range(res.set_of_pairs[dim].barcodes[simp].dim + 2)])]
+                                   for simp in range(res.set_of_pairs[dim].num_barcodes)]
         return {'dgms': barcodes_dict, 'pairs': simplexes_dict}        
 
     return
