@@ -4215,6 +4215,15 @@ int main(int argc, char** argv) {
         for(j = 0; j < list_of_barcodes[i].size(); j++){
             barcode_array[j] = list_of_barcodes[i][j];
 	    simpairs_array[j] = list_of_barcodes_simplices[i][j];
+		
+            for (int z = 0; z < list_of_barcodes_simplices[i][j].first.size(); z++) {
+		std::cout << list_of_barcodes_simplices[i][j].first[z] << " ";
+	    }
+	    std::cout << "/////";
+            for (int z = 0; z < list_of_barcodes_simplices[i][j].second.size(); z++) {
+		std::cout << list_of_barcodes_simplices[i][j].second[z] << " ";
+	    }
+	    std::cout << "\n";
         }
         collected_barcodes[i] = {j, barcode_array};
 	collected_simpairs[i] = {j, simpairs_array};
