@@ -4203,6 +4203,24 @@ int main(int argc, char** argv) {
         }
     }
     sw.stop();
+	
+    set_of_barcodes* collected_barcodes = (set_of_barcodes*)malloc(sizeof(set_of_barcodes) * list_of_barcodes.size());
+    set_of_simplex_pairs* collected_simpairs = (set_of_simplex_pairs*)malloc(sizeof(set_of_simplex_pairs) * list_of_barcodes_simplices.size());
+
+    for(index_t i = 0; i < list_of_barcodes.size();i++){
+        birth_death_coordinate* barcode_array = (birth_death_coordinate*)malloc(sizeof(birth_death_coordinate) * list_of_barcodes[i].size());
+        std::pair<std::vector<index_t>, std::vector<index_t>>* simpairs_array = (std::pair<std::vector<index_t>, std::vector<index_t>>*)malloc(sizeof(std::pair<std::vector<index_t>, std::vector<index_t>>) * list_of_barcodes_simplices[i].size());
+
+        index_t j;
+        for(j = 0; j < list_of_barcodes[i].size(); j++){
+            barcode_array[j] = list_of_barcodes[i][j];
+	    simpairs_array[j] = list_of_barcodes_simplices[i][j];
+        }
+        collected_barcodes[i] = {j, barcode_array};
+	collected_simpairs[i] = {j, simpairs_array};
+    }
+
+    res = {(int)(dim_max + 1),collected_barcodes, collected_simpairs};
 #ifdef INDICATE_PROGRESS
     std::cerr<<clear_line<<std::flush;
 #endif
