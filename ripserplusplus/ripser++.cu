@@ -163,14 +163,20 @@ typedef struct{
     index_t num_barcodes;
     birth_death_coordinate* barcodes;
 } set_of_barcodes;
+
+typedef struct{
+    index_t dim;
+    index_t* birth;
+    index_t* death;
+} simplex_pair;
 typedef struct{
     index_t num_barcodes;
-    std::pair<std::vector<index_t>, std::vector<index_t>>* simplex_pair;
+    simplex_struct* simplex_pair;
 } set_of_simplex_pairs;
 typedef struct{
     int num_dimensions;
     set_of_barcodes* all_barcodes;
-    set_of_simplex_pairs* all_simpleces;
+    set_of_simplex_pairs* all_simplices;
 } ripser_plusplus_result;
 
 ripser_plusplus_result res;
@@ -3863,18 +3869,22 @@ extern "C" ripser_plusplus_result run_main_filename(int argc,  char** argv, cons
 #endif
 
     set_of_barcodes* collected_barcodes = (set_of_barcodes*)malloc(sizeof(set_of_barcodes) * list_of_barcodes.size());
-    set_of_simplex_pairs* collected_simpairs = (set_of_simplex_pairs*)malloc(sizeof(set_of_simplex_pairs) * list_of_barcodes_simplices.size());
-
     for(index_t i = 0; i < list_of_barcodes.size();i++){
         birth_death_coordinate* barcode_array = (birth_death_coordinate*)malloc(sizeof(birth_death_coordinate) * list_of_barcodes[i].size());
-        std::pair<std::vector<index_t>, std::vector<index_t>>* simpairs_array = (std::pair<std::vector<index_t>, std::vector<index_t>>*)malloc(sizeof(std::pair<std::vector<index_t>, std::vector<index_t>>) * list_of_barcodes_simplices[i].size());
 
         index_t j;
-        for(j = 0; j < list_of_barcodes[i].size(); j++){
+        for(j = 0; j < list_of_barcodes[i].size(); j++)
             barcode_array[j] = list_of_barcodes[i][j];
-	    simpairs_array[j] = list_of_barcodes_simplices[i][j];
-        }
         collected_barcodes[i] = {j, barcode_array};
+    }
+	
+    set_of_simplex_pairs* collected_simpairs = (set_of_simplex_pairs*)malloc(sizeof(set_of_simplex_pairs) * list_of_barcodes_simplices.size());
+    for(index_t i = 0; i < list_of_barcodes_simplices.size();i++){
+        simplex_struct* simpairs_array = (simplex_struct*)malloc(sizeof(simplex_struct) * list_of_barcodes_simplices[i].size());
+
+	index_t j;
+	for(j = 0; j < list_of_barcodes_simplices[i].size(); j++)
+	    simpairs_array[j] = {i, list_of_barcodes_simplices[i][j].first, list_of_barcodes_simplices[i][j].second};
 	collected_simpairs[i] = {j, simpairs_array};
     }
 
@@ -4038,19 +4048,24 @@ extern "C" ripser_plusplus_result run_main(int argc, char** argv, value_t* matri
     std::cerr << "Done3" << std::flush;
     std::cout << "Done3" << std::flush;
 	
-    set_of_barcodes* collected_barcodes = (set_of_barcodes*)malloc(sizeof(set_of_barcodes) * list_of_barcodes.size());
-    set_of_simplex_pairs* collected_simpairs = (set_of_simplex_pairs*)malloc(sizeof(set_of_simplex_pairs) * list_of_barcodes_simplices.size());
 
+    set_of_barcodes* collected_barcodes = (set_of_barcodes*)malloc(sizeof(set_of_barcodes) * list_of_barcodes.size());
     for(index_t i = 0; i < list_of_barcodes.size();i++){
         birth_death_coordinate* barcode_array = (birth_death_coordinate*)malloc(sizeof(birth_death_coordinate) * list_of_barcodes[i].size());
-        std::pair<std::vector<index_t>, std::vector<index_t>>* simpairs_array = (std::pair<std::vector<index_t>, std::vector<index_t>>*)malloc(sizeof(std::pair<std::vector<index_t>, std::vector<index_t>>) * list_of_barcodes_simplices[i].size());
 
         index_t j;
-        for(j = 0; j < list_of_barcodes[i].size(); j++){
+        for(j = 0; j < list_of_barcodes[i].size(); j++)
             barcode_array[j] = list_of_barcodes[i][j];
-	    simpairs_array[j] = list_of_barcodes_simplices[i][j];
-        }
         collected_barcodes[i] = {j, barcode_array};
+    }
+	
+    set_of_simplex_pairs* collected_simpairs = (set_of_simplex_pairs*)malloc(sizeof(set_of_simplex_pairs) * list_of_barcodes_simplices.size());
+    for(index_t i = 0; i < list_of_barcodes_simplices.size();i++){
+        simplex_struct* simpairs_array = (simplex_struct*)malloc(sizeof(simplex_struct) * list_of_barcodes_simplices[i].size());
+
+	index_t j;
+	for(j = 0; j < list_of_barcodes_simplices[i].size(); j++)
+	    simpairs_array[j] = {i, list_of_barcodes_simplices[i][j].first, list_of_barcodes_simplices[i][j].second};
 	collected_simpairs[i] = {j, simpairs_array};
     }
 
@@ -4204,32 +4219,6 @@ int main(int argc, char** argv) {
     }
     sw.stop();
 	
-    set_of_barcodes* collected_barcodes = (set_of_barcodes*)malloc(sizeof(set_of_barcodes) * list_of_barcodes.size());
-    set_of_simplex_pairs* collected_simpairs = (set_of_simplex_pairs*)malloc(sizeof(set_of_simplex_pairs) * list_of_barcodes_simplices.size());
-
-    for(index_t i = 0; i < list_of_barcodes.size();i++){
-        birth_death_coordinate* barcode_array = (birth_death_coordinate*)malloc(sizeof(birth_death_coordinate) * list_of_barcodes[i].size());
-        std::pair<std::vector<index_t>, std::vector<index_t>>* simpairs_array = (std::pair<std::vector<index_t>, std::vector<index_t>>*)malloc(sizeof(std::pair<std::vector<index_t>, std::vector<index_t>>) * list_of_barcodes_simplices[i].size());
-
-        index_t j;
-        for(j = 0; j < list_of_barcodes[i].size(); j++){
-            barcode_array[j] = list_of_barcodes[i][j];
-	    simpairs_array[j] = list_of_barcodes_simplices[i][j];
-		
-            for (int z = 0; z < list_of_barcodes_simplices[i][j].first.size(); z++) {
-		std::cout << list_of_barcodes_simplices[i][j].first[z] << " ";
-	    }
-	    std::cout << "/////";
-            for (int z = 0; z < list_of_barcodes_simplices[i][j].second.size(); z++) {
-		std::cout << list_of_barcodes_simplices[i][j].second[z] << " ";
-	    }
-	    std::cout << "\n";
-        }
-        collected_barcodes[i] = {j, barcode_array};
-	collected_simpairs[i] = {j, simpairs_array};
-    }
-
-    res = {(int)(dim_max + 1),collected_barcodes, collected_simpairs};
 #ifdef INDICATE_PROGRESS
     std::cerr<<clear_line<<std::flush;
 #endif
