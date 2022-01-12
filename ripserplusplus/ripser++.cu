@@ -3884,8 +3884,8 @@ extern "C" ripser_plusplus_result run_main_filename(int argc,  char** argv, cons
 
 	index_t j;
 	for(j = 0; j < list_of_barcodes_simplices[i].size(); j++) {
-	    index_t* birth (index_t*)malloc(sizeof(index_t*) * list_of_barcodes_simplices[i][j].first.size());
-	    index_t* death (index_t*)malloc(sizeof(index_t*) * list_of_barcodes_simplices[i][j].second.size());
+	    index_t* birth = (index_t*)malloc(sizeof(index_t) * list_of_barcodes_simplices[i][j].first.size());
+	    index_t* death = (index_t*)malloc(sizeof(index_t) * list_of_barcodes_simplices[i][j].second.size());
 	    std::copy(list_of_barcodes_simplices[i][j].first.begin(), list_of_barcodes_simplices[i][j].first.end(), birth);
 	    std::copy(list_of_barcodes_simplices[i][j].second.begin(), list_of_barcodes_simplices[i][j].second.end(), death);
 	    simpairs_array[j] = {i,  birth, death};
