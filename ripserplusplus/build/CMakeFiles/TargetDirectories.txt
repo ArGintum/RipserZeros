@@ -1,0 +1,7 @@
+/content/drive/My Drive/Хлам/1/RipserZeros/ripserplusplus/build/CMakeFiles/rebuild_cache.dir
+/content/drive/My Drive/Хлам/1/RipserZeros/ripserplusplus/build/CMakeFiles/load_testing.dir
+/content/drive/My Drive/Хлам/1/RipserZeros/ripserplusplus/build/CMakeFiles/ripser++.dir
+/content/drive/My Drive/Хлам/1/RipserZeros/ripserplusplus/build/CMakeFiles/edit_cache.dir
+/content/drive/My Drive/Хлам/1/RipserZeros/ripserplusplus/build/CMakeFiles/tests.dir
+/content/drive/My Drive/Хлам/1/RipserZeros/ripserplusplus/build/CMakeFiles/ripser.dir
+/content/drive/My Drive/Хлам/1/RipserZeros/ripserplusplus/build/CMakeFiles/phmap.dir
