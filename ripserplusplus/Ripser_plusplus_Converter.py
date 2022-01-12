@@ -174,7 +174,8 @@ def Ripser_plusplus_Converter(prog, arguments, file_name, file_format, user_matr
 
         barcodes_dict = {}
         simplexes_dict = {}
-           
+        
+        res = prog.run_main(len(arguments), arguments, user_matrix, num_entries, num_rows, num_columns)   
         print(res)
 
         for dim in range(res.num_dimensions):
