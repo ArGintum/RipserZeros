@@ -168,7 +168,7 @@ typedef struct{
     index_t dim;
     index_t* birth;
     index_t* death;
-} simplex_pair;
+} simplex_struct;
 typedef struct{
     index_t num_barcodes;
     simplex_struct* simplex_pair;
