@@ -25,7 +25,7 @@ class Simplex_pair(ctypes.Structure):
     Replica of datatype for simplex pair from cuda
     """
     pass
-    _fields_ = [("dim;",ctypes.c_int64),("birth",ctypes.POINTER(ctypes.c_int64)), ("death",ctypes.POINTER(ctypes.c_int64))]
+    _fields_ = [("dim",ctypes.c_int64),("birth",ctypes.POINTER(ctypes.c_int64)), ("death",ctypes.POINTER(ctypes.c_int64))]
 class Set_of_simplex_pairs(ctypes.Structure):
     """
     Replica of datatype for simplex pair from cuda
