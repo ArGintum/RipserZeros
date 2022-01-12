@@ -20,12 +20,24 @@ class Set_of_barcodes(ctypes.Structure):
     """
     pass
     _fields_ = [("num_barcodes",ctypes.c_int64),("barcodes",ctypes.POINTER(Birth_death_coordinate))]
+class Simplex_pair(ctypes.Structure):    
+    """
+    Replica of datatype for simplex pair from cuda
+    """
+    pass
+    _fields_ = [("dim;",ctypes.c_int64),("birth",ctypes.POINTER(ctypes.c_int64)), ("death",ctypes.POINTER(ctypes.c_int64))]
+class Set_of_simplex_pairs(ctypes.Structure):
+    """
+    Replica of datatype for simplex pair from cuda
+    """
+    pass
+    _fields_ = [("num_barcodes",ctypes.c_int64),("barcodes",ctypes.POINTER(Simplex_pair))]
 class Ripser_plusplus_result(ctypes.Structure):
     """
     Replica of datatype for result from cuda
     """
     pass
-    _fields_ = [("num_dimensions",ctypes.c_int64), ("set_of_barcodes",ctypes.POINTER(Set_of_barcodes))]
+    _fields_ = [("num_dimensions",ctypes.c_int64), ("set_of_barcodes",ctypes.POINTER(Set_of_barcodes)), ("set_of_pairs",ctypes.POINTER(Set_of_simplex_pairs))]
 '''
 Prints out the error message and quits the program.
 msg -- Custom error message to show the user
@@ -104,7 +116,9 @@ def Ripser_plusplus_Converter(prog, arguments, file_name, file_format, user_matr
 
             for dim in range(res.num_dimensions):
                 barcodes_dict[dim] = np.array([np.array(res.set_of_barcodes[dim].barcodes[coord]) for coord in range(res.set_of_barcodes[dim].num_barcodes)])
-             #   simplexes_dict[dim] = res.set_of_simplex_pairs[dim]
+                simplexes_dict[dim] = [[np.array([res.set_of_pairs[i].barcodes[simp].birth[coord] for coord in range(res.set_of_pairs[i].barcodes[simp].dim + 1)]),
+                                       np.array([res.set_of_pairs[i].barcodes[simp].death[coord] for coord in range(res.set_of_pairs[i].barcodes[simp].dim + 2)])]
+                                       for simp in range(res.set_of_pairs[i].num_barcodes)]
             return {'dgms': barcodes_dict, 'pairs': simplexes_dict}
             
         else:
@@ -160,16 +174,15 @@ def Ripser_plusplus_Converter(prog, arguments, file_name, file_format, user_matr
 
         barcodes_dict = {}
         simplexes_dict = {}
-
-        res = prog.run_main(len(arguments), arguments, user_matrix, num_entries, num_rows, num_columns)
-        
+           
         print(res)
+
         for dim in range(res.num_dimensions):
             barcodes_dict[dim] = np.array([np.array(res.set_of_barcodes[dim].barcodes[coord]) for coord in range(res.set_of_barcodes[dim].num_barcodes)])
-            #simplexes_dict[dim] = res.set_of_simplex_pairs[dim]
-            
-        return {'dgms': barcodes_dict, 'pairs': []}
-        
+            simplexes_dict[dim] = [[np.array([res.set_of_pairs[i].barcodes[simp].birth[coord] for coord in range(res.set_of_pairs[i].barcodes[simp].dim + 1)]),
+                                   np.array([res.set_of_pairs[i].barcodes[simp].death[coord] for coord in range(res.set_of_pairs[i].barcodes[simp].dim + 2)])]
+                                   for simp in range(res.set_of_pairs[i].num_barcodes)]
+        return {'dgms': barcodes_dict, 'pairs': simplexes_dict}        
 
     return
 
