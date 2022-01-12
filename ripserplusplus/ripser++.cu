@@ -3883,8 +3883,13 @@ extern "C" ripser_plusplus_result run_main_filename(int argc,  char** argv, cons
         simplex_struct* simpairs_array = (simplex_struct*)malloc(sizeof(simplex_struct) * list_of_barcodes_simplices[i].size());
 
 	index_t j;
-	for(j = 0; j < list_of_barcodes_simplices[i].size(); j++)
-	    simpairs_array[j] = {i, list_of_barcodes_simplices[i][j].first, list_of_barcodes_simplices[i][j].second};
+	for(j = 0; j < list_of_barcodes_simplices[i].size(); j++) {
+	    index_t* birth (index_t*)malloc(sizeof(index_t*) * list_of_barcodes_simplices[i][j].first.size());
+	    index_t* death (index_t*)malloc(sizeof(index_t*) * list_of_barcodes_simplices[i][j].second.size());
+	    std::copy(list_of_barcodes_simplices[i][j].first.begin(), list_of_barcodes_simplices[i][j].first.end(), birth);
+	    std::copy(list_of_barcodes_simplices[i][j].second.begin(), list_of_barcodes_simplices[i][j].second.end(), death);
+	    simpairs_array[j] = {i,  birth, death};
+	}
 	collected_simpairs[i] = {j, simpairs_array};
     }
 
