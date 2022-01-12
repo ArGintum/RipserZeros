@@ -99,6 +99,8 @@ def Ripser_plusplus_Converter(prog, arguments, file_name, file_format, user_matr
 
             barcodes_dict = {}
             simplexes_dict = {}
+            
+            print(res)
 
             for dim in range(res.num_dimensions):
                 barcodes_dict[dim] = np.array([np.array(res.set_of_barcodes[dim].barcodes[coord]) for coord in range(res.set_of_barcodes[dim].num_barcodes)])
@@ -160,7 +162,8 @@ def Ripser_plusplus_Converter(prog, arguments, file_name, file_format, user_matr
         simplexes_dict = {}
 
         res = prog.run_main(len(arguments), arguments, user_matrix, num_entries, num_rows, num_columns)
-
+        
+        print(res)
         for dim in range(res.num_dimensions):
             barcodes_dict[dim] = np.array([np.array(res.set_of_barcodes[dim].barcodes[coord]) for coord in range(res.set_of_barcodes[dim].num_barcodes)])
             simplexes_dict[dim] = res.set_of_simplex_pairs[dim]
