@@ -3855,8 +3855,7 @@ extern "C" ripser_plusplus_result run_main_filename(int argc,  char** argv, cons
         }
     }
     sw.stop();
-    std::cerr << "Done" << std::flush;
-    std::cout << "Done" << std::flush;
+    
 #ifdef INDICATE_PROGRESS
     std::cerr<<clear_line<<std::flush;
 #endif
@@ -3894,10 +3893,6 @@ extern "C" ripser_plusplus_result run_main_filename(int argc,  char** argv, cons
     }
 
     res = {(int)(dim_max + 1),collected_barcodes, collected_simpairs};
-	
-    std::cerr << "Done2" << std::flush;
-    std::cout << "Done2" << std::flush;
-
     return res;
 }
 
@@ -4050,10 +4045,6 @@ extern "C" ripser_plusplus_result run_main(int argc, char** argv, value_t* matri
     std::cerr<<"total GPU memory used: "<<(freeMem_start-freeMem_end)/1000.0/1000.0/1000.0<<"GB"<<std::endl;
 #endif
 
-    std::cerr << "Done3" << std::flush;
-    std::cout << "Done3" << std::flush;
-	
-
     set_of_barcodes* collected_barcodes = (set_of_barcodes*)malloc(sizeof(set_of_barcodes) * list_of_barcodes.size());
     for(index_t i = 0; i < list_of_barcodes.size();i++){
         birth_death_coordinate* barcode_array = (birth_death_coordinate*)malloc(sizeof(birth_death_coordinate) * list_of_barcodes[i].size());
@@ -4080,10 +4071,6 @@ extern "C" ripser_plusplus_result run_main(int argc, char** argv, value_t* matri
     }
 
     res = {(int)(dim_max + 1),collected_barcodes, collected_simpairs};
-	
-    std::cerr << "Done4" << std::flush;
-    std::cout << "Done4" << std::flush;
-
     return res;
 }
 
