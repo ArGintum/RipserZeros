@@ -170,7 +170,7 @@ typedef struct{
 typedef struct{
     int num_dimensions;
     set_of_barcodes* all_barcodes;
-    set_of_simplex_pairs* all_simpleces;
+  //  set_of_simplex_pairs* all_simpleces;
 } ripser_plusplus_result;
 
 ripser_plusplus_result res;
@@ -3878,7 +3878,7 @@ extern "C" ripser_plusplus_result run_main_filename(int argc,  char** argv, cons
 	collected_simpairs[i] = {j, simpairs_array};
     }
 
-    res = {(int)(dim_max + 1),collected_barcodes, collected_simpairs};
+    res = {(int)(dim_max + 1),collected_barcodes};
 	
     std::cerr << "Done2" << std::flush;
     std::cout << "Done2" << std::flush;
@@ -4054,7 +4054,7 @@ extern "C" ripser_plusplus_result run_main(int argc, char** argv, value_t* matri
 	collected_simpairs[i] = {j, simpairs_array};
     }
 
-    res = {(int)(dim_max + 1),collected_barcodes, collected_simpairs};
+    res = {(int)(dim_max + 1),collected_barcodes};
 	
     std::cerr << "Done4" << std::flush;
     std::cout << "Done4" << std::flush;
