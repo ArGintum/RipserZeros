@@ -170,7 +170,7 @@ typedef struct{
 typedef struct{
     int num_dimensions;
     set_of_barcodes* all_barcodes;
-  //  set_of_simplex_pairs* all_simpleces;
+    set_of_simplex_pairs* all_simpleces;
 } ripser_plusplus_result;
 
 ripser_plusplus_result res;
