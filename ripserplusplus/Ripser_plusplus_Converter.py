@@ -255,18 +255,18 @@ def lower_distance_matrix_user_matrix(user_matrix):
         return
     user_matrix = user_matrix.reshape((1,user_matrix.size))
     
-    user_matrix += 1
-    user_matrix -= np.eye(user_matrix.shape[0])
-    user_matrix[:user_matrix.shape[0] // 2, :user_matrix.shape[0] // 2] = 0
     # Check size
     check = checkVector(user_matrix)
     if not check:
         printHelpAndExit("Vector not under the size constraint, number_of_elements = quadratic_solution * (quadratic_solution-1)/2, where quadratic_solution = (1 + sqrt(1 + 8 * number_of_elements))/2")
         return
     user_matrix = user_matrix.ravel()
+    user_matrix += 1
     num_entries = len(user_matrix)
     num_rows = ctypes.c_int(int((1 + math.sqrt(1 + 8 * num_entries))/2))
     num_columns = num_rows
+    n = int((1 + math.sqrt(1 + 8 * num_entries))/2)
+    user_matrix[:n * (n - 2) // 8] = 0
     return num_entries, num_rows, num_columns, user_matrix
 
 '''
