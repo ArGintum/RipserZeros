@@ -1903,7 +1903,6 @@ public:
         struct greaterdiam_lowerindex_diameter_index_t_struct_compare cmp;
 
         std::sort(edges.rbegin(), edges.rend(), cmp);
-	index_t mid = n / 2;
         std::vector<index_t> vertices_of_edge(2);
         for (auto e : edges) {
             get_simplex_vertices(e.index, 1, n, vertices_of_edge.rbegin());
@@ -1911,7 +1910,7 @@ public:
 
             if (u != v) {
                 dset.link(u, v);
-            } else if (vertices_of_edge[1] >= mid) {
+            } else {
                 columns_to_reduce.push_back(e);
             }
         }
@@ -2412,7 +2411,6 @@ void ripser<compressed_lower_distance_matrix>::gpu_compute_dim_0_pairs(std::vect
 #endif
 
     std::vector<index_t> vertices_of_edge(2);
-    index_t mid = n / 2;
     for(index_t idx=0; idx<*h_num_columns_to_reduce; idx++){
         struct diameter_index_t_struct e= h_columns_to_reduce[idx];
         vertices_of_edge.clear();
@@ -2421,7 +2419,7 @@ void ripser<compressed_lower_distance_matrix>::gpu_compute_dim_0_pairs(std::vect
 
         if (u != v) {
             dset.link(u, v);
-        } else if (vertices_of_edge[1] >= mid) {
+        } else {
             columns_to_reduce.push_back(e);
         }
     }
@@ -2484,7 +2482,6 @@ void ripser<sparse_distance_matrix>::gpu_compute_dim_0_pairs(std::vector<struct 
     std::cout << "persistence intervals in dim 0:" << std::endl;
 #endif
 
-    index_t mid = n / 2;
     std::vector<index_t> vertices_of_edge(2);
     for(index_t idx=0; idx<*h_num_simplices; idx++){
         struct diameter_index_t_struct e= h_simplices[idx];
@@ -2494,7 +2491,7 @@ void ripser<sparse_distance_matrix>::gpu_compute_dim_0_pairs(std::vector<struct 
 
         if (u != v) {
             dset.link(u, v);
-        } else if (vertices_of_edge[1] >= mid) {
+        } else {
             columns_to_reduce.push_back(e);
         }
     }
