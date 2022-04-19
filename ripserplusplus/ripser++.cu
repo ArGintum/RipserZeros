@@ -1898,6 +1898,7 @@ public:
 #endif
 
         union_find dset(n);
+		int mid = n / 2;
 
         edges= get_edges();
         struct greaterdiam_lowerindex_diameter_index_t_struct_compare cmp;
@@ -1910,7 +1911,7 @@ public:
 
             if (u != v) {
                 dset.link(u, v);
-            } else {
+            } else if (vertices_of_edge[0] >= mid) {
                 columns_to_reduce.push_back(e);
             }
         }
@@ -2088,7 +2089,7 @@ public:
                             std::cout << " [" << diameter << "," << death << ")" << std::endl
                                       << std::flush;
 #endif
-                            birth_death_coordinate barcode = {diameter,death};
+                            birth_death_coordinate barcode = {diameter - 1, death - 1};
 		            list_of_barcodes[dim].push_back(barcode);
 
 			    get_simplex_vertices(column_to_reduce.index, dim, n, birth_verices.rbegin());
@@ -2193,7 +2194,7 @@ public:
                             std::cout << " [" << diameter << "," << death << ")" << std::endl
                                       << std::flush;
 #endif
-                            birth_death_coordinate barcode = {diameter,death};
+                            birth_death_coordinate barcode = {diameter - 1, death - 1};
                             list_of_barcodes[dim].push_back(barcode);
 				
 			    get_simplex_vertices(column_to_reduce.index, dim, n, birth_verices.rbegin());
@@ -2411,6 +2412,7 @@ void ripser<compressed_lower_distance_matrix>::gpu_compute_dim_0_pairs(std::vect
 #endif
 
     std::vector<index_t> vertices_of_edge(2);
+	int mid = n / 2;
     for(index_t idx=0; idx<*h_num_columns_to_reduce; idx++){
         struct diameter_index_t_struct e= h_columns_to_reduce[idx];
         vertices_of_edge.clear();
@@ -2419,7 +2421,7 @@ void ripser<compressed_lower_distance_matrix>::gpu_compute_dim_0_pairs(std::vect
 
         if (u != v) {
             dset.link(u, v);
-        } else {
+        } else if (vertices_of_edge[0] >= mid) {
             columns_to_reduce.push_back(e);
         }
     }
@@ -2483,6 +2485,7 @@ void ripser<sparse_distance_matrix>::gpu_compute_dim_0_pairs(std::vector<struct 
 #endif
 
     std::vector<index_t> vertices_of_edge(2);
+	int mid = n / 2;
     for(index_t idx=0; idx<*h_num_simplices; idx++){
         struct diameter_index_t_struct e= h_simplices[idx];
         vertices_of_edge.clear();
@@ -2491,7 +2494,7 @@ void ripser<sparse_distance_matrix>::gpu_compute_dim_0_pairs(std::vector<struct 
 
         if (u != v) {
             dset.link(u, v);
-        } else {
+        } else if (vertices_of_edge[0] >= mid) {
             columns_to_reduce.push_back(e);
         }
     }
