@@ -224,6 +224,10 @@ def distance_matrix_user_matrix(user_matrix):
     if num_rows != num_columns:
         printHelpAndExit("Distance matrix must be square")
         return
+        
+    user_matrix += 1
+    user_matrix -= np.eye(user_matrix.shape[0])
+    user_matrix[:user_matrix.shape[0] // 2, :user_matrix.shape[0] // 2] = 0
     # Now convert to vector
     user_matrix = user_matrix[indices]
 
@@ -250,7 +254,10 @@ def lower_distance_matrix_user_matrix(user_matrix):
         printHelpAndExit("Lower Distance Matrix only supports a vector\n")
         return
     user_matrix = user_matrix.reshape((1,user_matrix.size))
-
+    
+    user_matrix += 1
+    user_matrix -= np.eye(user_matrix.shape[0])
+    user_matrix[:user_matrix.shape[0] // 2, :user_matrix.shape[0] // 2] = 0
     # Check size
     check = checkVector(user_matrix)
     if not check:
