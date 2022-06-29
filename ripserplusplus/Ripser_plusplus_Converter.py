@@ -20,12 +20,24 @@ class Set_of_barcodes(ctypes.Structure):
     """
     pass
     _fields_ = [("num_barcodes",ctypes.c_int64),("barcodes",ctypes.POINTER(Birth_death_coordinate))]
+class Simplex_pair(ctypes.Structure):    
+    """
+    Replica of datatype for simplex pair from cuda
+    """
+    pass
+    _fields_ = [("dim",ctypes.c_int64),("birth",ctypes.POINTER(ctypes.c_int64)), ("death",ctypes.POINTER(ctypes.c_int64))]
+class Set_of_simplex_pairs(ctypes.Structure):
+    """
+    Replica of datatype for simplex pair from cuda
+    """
+    pass
+    _fields_ = [("num_barcodes",ctypes.c_int64),("barcodes",ctypes.POINTER(Simplex_pair))]
 class Ripser_plusplus_result(ctypes.Structure):
     """
     Replica of datatype for result from cuda
     """
     pass
-    _fields_ = [("num_dimensions",ctypes.c_int64), ("set_of_barcodes",ctypes.POINTER(Set_of_barcodes))]
+    _fields_ = [("num_dimensions",ctypes.c_int64), ("set_of_barcodes",ctypes.POINTER(Set_of_barcodes)), ("set_of_pairs",ctypes.POINTER(Set_of_simplex_pairs))]
 '''
 Prints out the error message and quits the program.
 msg -- Custom error message to show the user
@@ -57,6 +69,10 @@ def printHelpAndExit(msg):
         sparse         (sparse distance matrix in sparse triplet (COO) format)
         ripser         (distance matrix in Ripser binary file format) (not supported)
     --dim <k>        compute persistent homology up to dimension <k>
+    --mode           compute the specified format of barcodes. Options are:
+        default        normal Vietori-Rips barcode; default
+        mtd            Manifold Topology Difference
+        rtd            Relative Topology Difference
     --threshold <t>  compute Rips complexes up to diameter <t>
     --sparse         force sparse computation
     --ratio <r>      only show persistence pairs with death/birth ratio > r
@@ -79,7 +95,7 @@ file_name -- user file name, empty if not specified
 file_format -- file format for user matrix or file name, default: distance
 user_matrix -- Entered user matrix, either a vector or a matrix with at least 2 rows.
 '''
-def Ripser_plusplus_Converter(prog, arguments, file_name, file_format, user_matrix = None):
+def Ripser_plusplus_Converter(prog, arguments, file_name, file_format, computational_mode, user_matrix = None):
 
     if isinstance(user_matrix,np.ndarray) and len(user_matrix) == 0:
         user_matrix = None
@@ -98,10 +114,14 @@ def Ripser_plusplus_Converter(prog, arguments, file_name, file_format, user_matr
             res = prog.run_main_filename(len(arguments), arguments, file_name)
 
             barcodes_dict = {}
-
+            simplexes_dict = {}
+            
             for dim in range(res.num_dimensions):
                 barcodes_dict[dim] = np.array([np.array(res.set_of_barcodes[dim].barcodes[coord]) for coord in range(res.set_of_barcodes[dim].num_barcodes)])
-            return barcodes_dict
+                simplexes_dict[dim] = [[np.array([res.set_of_pairs[dim].barcodes[simp].birth[coord] for coord in range(res.set_of_pairs[dim].barcodes[simp].dim + 1)]),
+                                       np.array([res.set_of_pairs[dim].barcodes[simp].death[coord] for coord in range(res.set_of_pairs[dim].barcodes[simp].dim + 2)])]
+                                       for simp in range(res.set_of_pairs[dim].num_barcodes)]
+            return {'dgms': barcodes_dict, 'pairs': simplexes_dict}
             
         else:
 
@@ -117,10 +137,10 @@ def Ripser_plusplus_Converter(prog, arguments, file_name, file_format, user_matr
     else:
 
         if file_format == "distance":
-            num_entries, num_rows, num_columns, user_matrix = distance_matrix_user_matrix(user_matrix)
+            num_entries, num_rows, num_columns, user_matrix = distance_matrix_user_matrix(user_matrix, computational_mode)
 
         elif file_format == "lower-distance":
-            num_entries, num_rows, num_columns, user_matrix = lower_distance_matrix_user_matrix(user_matrix)
+            num_entries, num_rows, num_columns, user_matrix = lower_distance_matrix_user_matrix(user_matrix, computational_mode)
 
         elif file_format == "point-cloud":
             num_entries, num_rows, num_columns, user_matrix = point_cloud_user_matrix(user_matrix)
@@ -155,13 +175,16 @@ def Ripser_plusplus_Converter(prog, arguments, file_name, file_format, user_matr
         prog.run_main.restype = Ripser_plusplus_result
 
         barcodes_dict = {}
-
-        res = prog.run_main(len(arguments), arguments, user_matrix, num_entries, num_rows, num_columns)
+        simplexes_dict = {}
+        
+        res = prog.run_main(len(arguments), arguments, user_matrix, num_entries, num_rows, num_columns)   
 
         for dim in range(res.num_dimensions):
             barcodes_dict[dim] = np.array([np.array(res.set_of_barcodes[dim].barcodes[coord]) for coord in range(res.set_of_barcodes[dim].num_barcodes)])
-        return barcodes_dict
-        
+            simplexes_dict[dim] = [[np.array([res.set_of_pairs[dim].barcodes[simp].birth[coord] for coord in range(res.set_of_pairs[dim].barcodes[simp].dim + 1)]),
+                                   np.array([res.set_of_pairs[dim].barcodes[simp].death[coord] for coord in range(res.set_of_pairs[dim].barcodes[simp].dim + 2)])]
+                                   for simp in range(res.set_of_pairs[dim].num_barcodes)]
+        return {'dgms': barcodes_dict, 'pairs': simplexes_dict}        
 
     return
 
@@ -182,7 +205,7 @@ def checkVector(user_vector):
 Runs ripser++ with distance setting using user_matrix
 user_matrix -- entered user matrix
 '''
-def distance_matrix_user_matrix(user_matrix):
+def distance_matrix_user_matrix(user_matrix, computational_mode):
 
     # First check if symmetric
     if not np.allclose(user_matrix, user_matrix.T):
@@ -205,6 +228,12 @@ def distance_matrix_user_matrix(user_matrix):
     if num_rows != num_columns:
         printHelpAndExit("Distance matrix must be square")
         return
+    
+    if computational_mode == "rtd":
+        user_matrix += 1
+        user_matrix -= np.eye(user_matrix.shape[0])
+        user_matrix[:user_matrix.shape[0] // 2, :user_matrix.shape[0] // 2] = 0
+    
     # Now convert to vector
     user_matrix = user_matrix[indices]
 
@@ -222,7 +251,7 @@ def distance_matrix_user_matrix(user_matrix):
 Runs ripser++ with lower-distance setting using user_matrix
 user_matrix -- entered user matrix
 '''
-def lower_distance_matrix_user_matrix(user_matrix):
+def lower_distance_matrix_user_matrix(user_matrix, computational_mode):
 
     user_matrix_dimensions = user_matrix.shape
     # Check whether it is a row/column vector
@@ -231,16 +260,23 @@ def lower_distance_matrix_user_matrix(user_matrix):
         printHelpAndExit("Lower Distance Matrix only supports a vector\n")
         return
     user_matrix = user_matrix.reshape((1,user_matrix.size))
-
+    
     # Check size
     check = checkVector(user_matrix)
     if not check:
         printHelpAndExit("Vector not under the size constraint, number_of_elements = quadratic_solution * (quadratic_solution-1)/2, where quadratic_solution = (1 + sqrt(1 + 8 * number_of_elements))/2")
         return
     user_matrix = user_matrix.ravel()
+    
     num_entries = len(user_matrix)
-    num_rows = ctypes.c_int(int((1 + math.sqrt(1 + 8 * num_entries))/2))
+    num_rows = ctypes.c_int(int((1 + math.sqrt(1 + 8 * num_entries))/2))    
     num_columns = num_rows
+    n = int((1 + math.sqrt(1 + 8 * num_entries))/2)
+    
+    if computational_mode == "rtd":
+        user_matrix += 1    
+        user_matrix[:n * (n - 2) // 8] = 0
+ 
     return num_entries, num_rows, num_columns, user_matrix
 
 '''
