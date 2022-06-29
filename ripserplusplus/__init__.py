@@ -23,7 +23,8 @@ def run(args, data = None):
     file_format = "distance"
     file_name = ""
     computational_mode = ""
-    
+    #print("\n------------RIPSER++ WITH PYTHON BINDINGS CALLED------------", sys.stderr)
+    #print(params)
     i = 0
     while i < len(params):
         if params[i] == "--format":
@@ -77,13 +78,11 @@ def run(args, data = None):
             i += 1
             continue
         else:
-            printHelpAndExit("Invalid Ripser++ Option")   
+            printHelpAndExit("Invalid Ripser++ Option") 
     
     matrix = []
     if data is not None and isinstance(data, str):
-        #file_name = data
         file_name= ctypes.c_char_p(data.encode('utf-8'))
-        #matrix = (ctypes.c_float * len(matrix))(*matrix)
         matrix = None   
     elif data is not None and isinstance(data, np.ndarray):
         matrix = data
@@ -97,17 +96,17 @@ def run(args, data = None):
     arguments[:] = params
     
     prog = None
-    path2= str(pathlib.Path(__file__).with_name('libphmap.so'))
+    path2= str(pathlib.Path(__file__).with_name('pyripser++.dll'))
     if None!=path2:
         prog2= ctypes.cdll.LoadLibrary(path2)
     else:
-        raise Exception("Could not locate libphmap.so file, please check README.md for details.")
+        raise Exception("Could not locate pyripser++.dll file, please check README.md for details.")
 
-    path= str(pathlib.Path(__file__).with_name('libpyripser++.so'))
+    path= str(pathlib.Path(__file__).with_name('pyripser++.dll'))
     if None != path:
           prog = ctypes.cdll.LoadLibrary(path)
     else:
-        raise Exception("Could not locate libpyripser++.so file, please check README.md for details.")
+        raise Exception("Could not locate pyripser++.dll file, please check README.md for details.")
 
     # Running python binding
     barcodes_dict = Ripser_plusplus_Converter(prog, arguments, file_name, file_format, computational_mode, matrix)
