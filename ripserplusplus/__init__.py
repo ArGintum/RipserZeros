@@ -6,8 +6,8 @@ from .Ripser_plusplus_Converter import find
 import numpy as np
 import scipy.sparse as sps
 import os
+import platform
 import pathlib
-
 
 '''
 Runs ripser++ through user arguments.
