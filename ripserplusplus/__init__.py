@@ -22,8 +22,8 @@ def run(args, data = None):
         printHelpAndExit("Printing help")
     file_format = "distance"
     file_name = ""
-    #print("\n------------RIPSER++ WITH PYTHON BINDINGS CALLED------------", sys.stderr)
-    #print(params)
+    computational_mode = ""
+    
     i = 0
     while i < len(params):
         if params[i] == "--format":
@@ -47,6 +47,15 @@ def run(args, data = None):
                 params[i+1] = ctypes.c_char_p(params[i+1].encode('utf-8'))
                 i += 2
                 continue
+        elif params[i]=="--mode":
+            params[i] = ctypes.c_char_p(params[i].encode('utf-8'))
+            if i+1 >= len(params):
+                printHelpAndExit("Ripser++Python Error: Mode not Specified")
+            else:
+                params[i+1] = ctypes.c_char_p(params[i+1].encode('utf-8'))
+                computational_mode = params[i+1]
+                i += 2
+                continue
         elif params[i]=="--threshold":
             params[i] = ctypes.c_char_p(params[i].encode('utf-8'))
             if i+1 >= len(params):
@@ -67,19 +76,8 @@ def run(args, data = None):
             params[i] = ctypes.c_char_p(params[i].encode('utf-8'))
             i += 1
             continue
-        #elif "--" in params[i]:
-            # Handle more params here if necessary
-            #params[i] = ctypes.c_char_p(params[i].encode('utf-8'))
-            #i += 1
         else:
-            # Can be replaced here if the user wishes to add an additional parameter to be processed on python side
-            printHelpAndExit("Invalid Ripser++ Option")
-            #pass
-
-        #read the next input if expected
-        #params[i] = ctypes.c_char_p(params[i].encode('utf-8'))
-        #i += 1
-    
+            printHelpAndExit("Invalid Ripser++ Option")   
     
     matrix = []
     if data is not None and isinstance(data, str):
@@ -105,25 +103,12 @@ def run(args, data = None):
     else:
         raise Exception("Could not locate libphmap.so file, please check README.md for details.")
 
-    # Check whether environment variable is set (deprecated)
-    #if "PYRIPSER_PP_BIN" in os.environ:
-        #prog = ctypes.cdll.LoadLibrary(os.environ["PYRIPSER_PP_BIN"])
-    #else:
-        #path= find("libpyripser++.so",".")#check the current directory and everything below it
     path= str(pathlib.Path(__file__).with_name('libpyripser++.so'))
     if None != path:
           prog = ctypes.cdll.LoadLibrary(path)
     else:
         raise Exception("Could not locate libpyripser++.so file, please check README.md for details.")
-            ##path= find("libpyripser++.so","..")#check the parent directory and everything below it
-            ##if None != path:
-            ##    prog = ctypes.cdll.LoadLibrary(path)
-            # Otherwise assume the current directory is under working_directory
-            ##elif os.path.isfile("../bin/libpyripser++.so"):
-            ##    prog = ctypes.cdll.LoadLibrary("../bin/libpyripser++.so")
-            ##else:
-            ##    printHelpAndExit("Could not locate libpyripser++.so file, please check README.md for details.")
 
     # Running python binding
-    barcodes_dict = Ripser_plusplus_Converter(prog, arguments, file_name, file_format, matrix)
+    barcodes_dict = Ripser_plusplus_Converter(prog, arguments, file_name, file_format, computational_mode, matrix)
     return barcodes_dict
