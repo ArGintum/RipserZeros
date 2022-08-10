@@ -6,8 +6,8 @@ from .Ripser_plusplus_Converter import find
 import numpy as np
 import scipy.sparse as sps
 import os
-import platform
 import pathlib
+import platform
 
 
 '''
@@ -45,6 +45,14 @@ def run(args, data = None):
             params[i] = ctypes.c_char_p(params[i].encode('utf-8'))
             if i+1 >= len(params):
                 printHelpAndExit("Ripser++Python Error: Dim not Specified")
+            else:
+                params[i+1] = ctypes.c_char_p(params[i+1].encode('utf-8'))
+                i += 2
+                continue
+        elif params[i]=="--sep":
+            params[i] = ctypes.c_char_p(params[i].encode('utf-8'))
+            if i+1 >= len(params):
+                printHelpAndExit("Ripser++Python Error: Separation between clouds is not specified")
             else:
                 params[i+1] = ctypes.c_char_p(params[i+1].encode('utf-8'))
                 i += 2
@@ -124,6 +132,7 @@ def run(args, data = None):
             raise Exception("Could not locate pyripser++.dll file, please check README.md for details.")
         else:
             raise Exception("Could not locate pyripser++.so file, please check README.md for details.")
+
     # Running python binding
     barcodes_dict = Ripser_plusplus_Converter(prog, arguments, file_name, file_format, computational_mode, matrix)
     return barcodes_dict
