@@ -2438,7 +2438,7 @@ void ripser<compressed_lower_distance_matrix>::gpu_compute_dim_0_pairs(std::vect
 				list_of_barcodes[0].push_back(barcode);
 				list_of_barcodes_simplices[0].push_back({{vertices_of_edge[1]}, vertices_of_edge});
 			}
-        } else if (ripser_mode == VANILLA || (ripser_mode == MTD && e.diameter > 0) || (ripser_mode == RTD && vertices_of_edge[0] >= mid)) {
+        } else if (ripser_mode == VANILLA || (ripser_mode == MTD && e.diameter > 0 && vertices_of_edge[0] < separator_pos) || (ripser_mode == RTD && vertices_of_edge[0] >= mid)) {
             columns_to_reduce.push_back(e);
         }
     }
@@ -2511,7 +2511,7 @@ void ripser<sparse_distance_matrix>::gpu_compute_dim_0_pairs(std::vector<struct 
 
         if (u != v) {
             dset.link(u, v);
-        } else if (ripser_mode == VANILLA || (ripser_mode == MTD && e.diameter > 0) || (ripser_mode == RTD && vertices_of_edge[0] >= mid)) {
+        } else if (ripser_mode == VANILLA || (ripser_mode == MTD && e.diameter > 0 && vertices_of_edge[0] < separator_pos) || (ripser_mode == RTD && vertices_of_edge[0] >= mid)) {
             columns_to_reduce.push_back(e);
         }
     }
@@ -3079,7 +3079,6 @@ void ripser<compressed_lower_distance_matrix>::assemble_columns_gpu_accel_transi
 
 template <>
 void ripser<compressed_lower_distance_matrix>::compute_barcodes() {
-
     Stopwatch sw, gpu_accel_timer;
     gpu_accel_timer.start();
     sw.start();
@@ -3229,21 +3228,22 @@ void ripser<compressed_lower_distance_matrix>::compute_barcodes() {
 #ifndef CPUONLY_SPARSE_HASHMAP
         std::cerr<<"CPU-ONLY MODE FOR REMAINDER OF HIGH DIMENSIONAL COMPUTATION (NOT ENOUGH GPU DEVICE MEMORY)"<<std::endl;
 #endif
+
         free_init_cpumem();
         hash_map<index_t,index_t> cpu_pivot_column_index;
         cpu_pivot_column_index.reserve(*h_num_columns_to_reduce);
         bool more_than_one_dim_to_compute= dim_max>gpu_dim_max+1;
         assemble_columns_gpu_accel_transition_to_cpu_only(more_than_one_dim_to_compute, simplices, columns_to_reduce, cpu_pivot_column_index, gpu_dim_max+1);
         free_remaining_cpumem();
+				std::cerr << " 14-1-2\n";
+
         for (index_t dim= gpu_dim_max+1; dim <= dim_max; ++dim) {
             cpu_pivot_column_index.clear();
             cpu_pivot_column_index.reserve(columns_to_reduce.size());
             compute_pairs(columns_to_reduce, cpu_pivot_column_index, dim);
             if(dim<dim_max){
                 sw.start();
-                //cpu_byneighbor_assemble_columns is a little faster?
                 cpu_byneighbor_assemble_columns_to_reduce(simplices, columns_to_reduce, cpu_pivot_column_index, dim+1);
-                //cpu_assemble_columns_to_reduce(columns_to_reduce,cpu_pivot_column_index, dim+1);
                 sw.stop();
 #ifdef PROFILING
                 std::cerr<<"TIME FOR CPU ASSEMBLE: "<<sw.ms()/1000.0<<"s"<<std::endl;
@@ -3251,20 +3251,20 @@ void ripser<compressed_lower_distance_matrix>::compute_barcodes() {
             }
         }
     }else {
-        if (n >= 10) {
+        if (n >= 10 && dim_max >= 1) {
             free_init_cpumem();
-            free_remaining_cpumem();
+
+			free_remaining_cpumem();
         }
     }
+
     if(gpu_dim_max>=1 && n>=10) {
         free_gpumem_dense_computation();
 //        free CPU memory:
 
         cudaFreeHost(h_num_columns_to_reduce);
         cudaFreeHost(h_num_nonapparent);
-        //free(h_pivot_array)
-        //free(h_columns_to_reduce)
-        //free(h_pivot_column_index_array_OR_nonapparent_cols)
+
 #if defined(ASSEMBLE_REDUCTION_SUBMATRIX)
         free(h_flagarray_OR_index_to_subindex);
 #endif
@@ -4008,12 +4008,11 @@ extern "C" ripser_plusplus_result run_main(int argc, char** argv, value_t* matri
             use_sparse= true;
         }
     }
-
     list_of_barcodes = std::vector<std::vector<birth_death_coordinate>>();
     list_of_barcodes_simplices = std::vector<std::vector<std::pair<std::vector<index_t>, std::vector<index_t>>>>();
     for(index_t i = 0; i <= dim_max; i++){
         list_of_barcodes.push_back(std::vector<birth_death_coordinate>());
-	list_of_barcodes_simplices.push_back(std::vector<std::pair<std::vector<index_t>, std::vector<index_t>>>());
+		list_of_barcodes_simplices.push_back(std::vector<std::pair<std::vector<index_t>, std::vector<index_t>>>());
     }
 
     if (format == SPARSE) {//this branch is currently unsupported in run_main, see run_main_filename() instead
@@ -4083,6 +4082,7 @@ extern "C" ripser_plusplus_result run_main(int argc, char** argv, value_t* matri
             ripser<compressed_lower_distance_matrix>(std::move(dist), dim_max, threshold, ratio, ripser_mode, separator_pos).compute_barcodes();
         }
     }
+
     sw.stop();
 #ifdef INDICATE_PROGRESS
     std::cerr<<clear_line<<std::flush;
@@ -4104,20 +4104,20 @@ extern "C" ripser_plusplus_result run_main(int argc, char** argv, value_t* matri
             barcode_array[j] = list_of_barcodes[i][j];
         collected_barcodes[i] = {j, barcode_array};
     }
-	
+
     set_of_simplex_pairs* collected_simpairs = (set_of_simplex_pairs*)malloc(sizeof(set_of_simplex_pairs) * list_of_barcodes_simplices.size());
     for(index_t i = 0; i < list_of_barcodes_simplices.size();i++){
         simplex_struct* simpairs_array = (simplex_struct*)malloc(sizeof(simplex_struct) * list_of_barcodes_simplices[i].size());
 
-	index_t j;
-	for(j = 0; j < list_of_barcodes_simplices[i].size(); j++) {
-	    index_t* birth = (index_t*)malloc(sizeof(index_t) * list_of_barcodes_simplices[i][j].first.size());
-	    index_t* death = (index_t*)malloc(sizeof(index_t) * list_of_barcodes_simplices[i][j].second.size());
-	    std::copy(list_of_barcodes_simplices[i][j].first.begin(), list_of_barcodes_simplices[i][j].first.end(), birth);
-	    std::copy(list_of_barcodes_simplices[i][j].second.begin(), list_of_barcodes_simplices[i][j].second.end(), death);
-	    simpairs_array[j] = {i,  birth, death};
-	}
-	collected_simpairs[i] = {j, simpairs_array};
+		index_t j;
+		for(j = 0; j < list_of_barcodes_simplices[i].size(); j++) {
+			index_t* birth = (index_t*)malloc(sizeof(index_t) * list_of_barcodes_simplices[i][j].first.size());
+			index_t* death = (index_t*)malloc(sizeof(index_t) * list_of_barcodes_simplices[i][j].second.size());
+			std::copy(list_of_barcodes_simplices[i][j].first.begin(), list_of_barcodes_simplices[i][j].first.end(), birth);
+			std::copy(list_of_barcodes_simplices[i][j].second.begin(), list_of_barcodes_simplices[i][j].second.end(), death);
+			simpairs_array[j] = {i,  birth, death};
+		}
+		collected_simpairs[i] = {j, simpairs_array};
     }
 
     res = {(int)(dim_max + 1),collected_barcodes, collected_simpairs};
@@ -4209,7 +4209,7 @@ int main(int argc, char** argv) {
     list_of_barcodes_simplices = std::vector<std::vector<std::pair<std::vector<index_t>, std::vector<index_t>>>>();
     for(index_t i = 0; i <= dim_max; i++){
         list_of_barcodes.push_back(std::vector<birth_death_coordinate>());
-	list_of_barcodes_simplices.push_back(std::vector<std::pair<std::vector<index_t>, std::vector<index_t>>>());
+		list_of_barcodes_simplices.push_back(std::vector<std::pair<std::vector<index_t>, std::vector<index_t>>>());
     }
 
     std::ifstream file_stream(filename);
