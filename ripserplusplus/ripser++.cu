@@ -1569,6 +1569,7 @@ template <typename DistanceMatrix> class ripser {
     mutable std::vector<diameter_index_t_struct> cofacet_entries;
 private:
     computational_mode ripser_mode;
+	int separator_pos;
 	int distance_offset;
     size_t freeMem, totalMem;
     cudaDeviceProp deviceProp;
@@ -1630,8 +1631,8 @@ private:
     index_t* h_num_simplices;//h_num_simplices is tied to d_num_simplices in pinned memory
 public:
 
-    ripser(DistanceMatrix&& _dist, index_t _dim_max, value_t _threshold, float _ratio, computational_mode _ripser_mode)
-            : dist(std::move(_dist)), n(dist.size()),
+    ripser(DistanceMatrix&& _dist, index_t _dim_max, value_t _threshold, float _ratio, computational_mode _ripser_mode, int separator_position)
+            : dist(std::move(_dist)), n(dist.size()), separator_pos(separator_position),
               dim_max(std::min(_dim_max, index_t(dist.size() - 2))), threshold(_threshold),
               ratio(_ratio), ripser_mode(_ripser_mode), distance_offset((_ripser_mode == RTD ? 1 : 0)), binomial_coeff(n, dim_max + 2) {}
 
@@ -1914,8 +1915,14 @@ public:
             index_t u= dset.find(vertices_of_edge[0]), v= dset.find(vertices_of_edge[1]);
 
             if (u != v) {
+				if (e.diameter != 0) {
+				    //Collect persistence pair
+                    birth_death_coordinate barcode = {0, e.diameter};
+                    list_of_barcodes[0].push_back(barcode);
+					list_of_barcodes_simplices[0].push_back({{vertices_of_edge[1]}, vertices_of_edge});
+				}
                 dset.link(u, v);
-            } else if (ripser_mode == VANILLA || (ripser_mode == MTD && e.diameter > 0) || (ripser_mode == RTD && vertices_of_edge[0] >= mid)) {
+            } else if (ripser_mode == VANILLA || (ripser_mode == MTD && e.diameter > 0 && vertices_of_edge[0] < separator_pos) || (ripser_mode == RTD && vertices_of_edge[0] >= mid)) {
                 columns_to_reduce.push_back(e);
             }
         }
@@ -2425,6 +2432,12 @@ void ripser<compressed_lower_distance_matrix>::gpu_compute_dim_0_pairs(std::vect
 
         if (u != v) {
             dset.link(u, v);
+			if (e.diameter != 0) {
+				//Collect persistence pair
+				birth_death_coordinate barcode = {0, e.diameter};
+				list_of_barcodes[0].push_back(barcode);
+				list_of_barcodes_simplices[0].push_back({{vertices_of_edge[1]}, vertices_of_edge});
+			}
         } else if (ripser_mode == VANILLA || (ripser_mode == MTD && e.diameter > 0) || (ripser_mode == RTD && vertices_of_edge[0] >= mid)) {
             columns_to_reduce.push_back(e);
         }
@@ -3739,6 +3752,7 @@ extern "C" ripser_plusplus_result run_main_filename(int argc,  char** argv, cons
 
     bool use_sparse= false;
 	computational_mode ripser_mode = VANILLA;
+	int separator_pos = -1;
 
     for (index_t i= 0; i < argc; i++) {
         const std::string arg(argv[i]);
@@ -3747,7 +3761,12 @@ extern "C" ripser_plusplus_result run_main_filename(int argc,  char** argv, cons
         } else if (arg == "--dim") {
             std::string parameter= std::string(argv[++i]);
             size_t next_pos;
-            dim_max= std::stol(parameter, &next_pos);
+            dim_max = std::stol(parameter, &next_pos);
+            if (next_pos != parameter.size()) print_usage_and_exit(-1);
+        } else if (arg == "--sep") {
+            std::string parameter= std::string(argv[++i]);
+            size_t next_pos;
+            separator_pos = std::stol(parameter, &next_pos);
             if (next_pos != parameter.size()) print_usage_and_exit(-1);
         } else if (arg == "--threshold") {
             std::string parameter= std::string(argv[++i]);
@@ -3794,7 +3813,7 @@ extern "C" ripser_plusplus_result run_main_filename(int argc,  char** argv, cons
     list_of_barcodes_simplices = std::vector<std::vector<std::pair<std::vector<index_t>, std::vector<index_t>> >>();
     for(index_t i = 0; i <= dim_max; i++){
         list_of_barcodes.push_back(std::vector<birth_death_coordinate>());
-	list_of_barcodes_simplices.push_back(std::vector<std::pair<std::vector<index_t>, std::vector<index_t>> >());
+        list_of_barcodes_simplices.push_back(std::vector<std::pair<std::vector<index_t>, std::vector<index_t>> >());
     }
 
     std::ifstream file_stream(filename);
@@ -3817,7 +3836,7 @@ extern "C" ripser_plusplus_result run_main_filename(int argc,  char** argv, cons
                   << dist.num_entries/2 << "/" << (dist.size() * (dist.size() - 1)) / 2 << " entries"
                   << std::endl;
 #endif
-        ripser<sparse_distance_matrix>(std::move(dist), dim_max, threshold, ratio, ripser_mode)
+        ripser<sparse_distance_matrix>(std::move(dist), dim_max, threshold, ratio, ripser_mode, separator_pos)
                 .compute_barcodes();
     }else {
 
@@ -3859,13 +3878,13 @@ extern "C" ripser_plusplus_result run_main_filename(int argc,  char** argv, cons
                       << std::endl;
 #endif
             ripser<sparse_distance_matrix>(sparse_distance_matrix(std::move(dist), threshold),
-                                           dim_max, threshold, ratio, ripser_mode)
+                                           dim_max, threshold, ratio, ripser_mode, separator_pos)
                     .compute_barcodes();
         } else {
 #ifdef COUNTING
             std::cout << "distance matrix with " << dist.size() << " points" << std::endl;
 #endif
-            ripser<compressed_lower_distance_matrix>(std::move(dist), dim_max, threshold, ratio, ripser_mode).compute_barcodes();
+            ripser<compressed_lower_distance_matrix>(std::move(dist), dim_max, threshold, ratio, ripser_mode, separator_pos).compute_barcodes();
         }
     }
     sw.stop();
@@ -3927,6 +3946,7 @@ extern "C" ripser_plusplus_result run_main(int argc, char** argv, value_t* matri
     index_t dim_max= 1;
     value_t threshold= std::numeric_limits<value_t>::max();
 	computational_mode ripser_mode = VANILLA;
+	int separator_pos = -1;
 
     float ratio= 1;
 
@@ -3940,6 +3960,11 @@ extern "C" ripser_plusplus_result run_main(int argc, char** argv, value_t* matri
             std::string parameter= std::string(argv[++i]);
             size_t next_pos;
             dim_max= std::stol(parameter, &next_pos);
+            if (next_pos != parameter.size()) print_usage_and_exit(-1);
+		} else if (arg == "--sep") {
+            std::string parameter= std::string(argv[++i]);
+            size_t next_pos;
+            separator_pos = std::stol(parameter, &next_pos);
             if (next_pos != parameter.size()) print_usage_and_exit(-1);
         } else if (arg == "--threshold") {
             std::string parameter= std::string(argv[++i]);
@@ -4008,7 +4033,7 @@ extern "C" ripser_plusplus_result run_main(int argc, char** argv, value_t* matri
                   << dist.num_entries/2 << "/" << (dist.size() * (dist.size() - 1)) / 2 << " entries"
                   << std::endl;
 #endif
-        ripser<sparse_distance_matrix>(std::move(dist), dim_max, threshold, ratio, ripser_mode)
+        ripser<sparse_distance_matrix>(std::move(dist), dim_max, threshold, ratio, ripser_mode, separator_pos)
                 .compute_barcodes();
     }else{
         //Stopwatch IOsw;
@@ -4049,13 +4074,13 @@ extern "C" ripser_plusplus_result run_main(int argc, char** argv, value_t* matri
                       << std::endl;
 #endif
             ripser<sparse_distance_matrix>(sparse_distance_matrix(std::move(dist), threshold),
-                                           dim_max, threshold, ratio, ripser_mode)
+                                           dim_max, threshold, ratio, ripser_mode, separator_pos)
                     .compute_barcodes();
         } else {
 #ifdef COUNTING
             std::cout << "distance matrix with " << dist.size() << " points" << std::endl;
 #endif
-            ripser<compressed_lower_distance_matrix>(std::move(dist), dim_max, threshold, ratio, ripser_mode).compute_barcodes();
+            ripser<compressed_lower_distance_matrix>(std::move(dist), dim_max, threshold, ratio, ripser_mode, separator_pos).compute_barcodes();
         }
     }
     sw.stop();
@@ -4116,7 +4141,8 @@ int main(int argc, char** argv) {
     index_t dim_max= 1;
     value_t threshold= std::numeric_limits<value_t>::max();
 	computational_mode ripser_mode = VANILLA;
-
+	int separator_pos = -1;
+	
     float ratio= 1;
 
     bool use_sparse= false;
@@ -4129,6 +4155,11 @@ int main(int argc, char** argv) {
             std::string parameter= std::string(argv[++i]);
             size_t next_pos;
             dim_max= std::stol(parameter, &next_pos);
+            if (next_pos != parameter.size()) print_usage_and_exit(-1);
+		} else if (arg == "--sep") {
+            std::string parameter= std::string(argv[++i]);
+            size_t next_pos;
+            separator_pos = std::stol(parameter, &next_pos);
             if (next_pos != parameter.size()) print_usage_and_exit(-1);
         } else if (arg == "--threshold") {
             std::string parameter= std::string(argv[++i]);
@@ -4201,7 +4232,7 @@ int main(int argc, char** argv) {
                   << dist.num_entries/2 << "/" << (dist.size() * (dist.size() - 1)) / 2 << " entries"
                   << std::endl;
 #endif
-        ripser<sparse_distance_matrix>(std::move(dist), dim_max, threshold, ratio, ripser_mode)
+        ripser<sparse_distance_matrix>(std::move(dist), dim_max, threshold, ratio, ripser_mode, separator_pos)
                 .compute_barcodes();
     }else {
 
@@ -4241,13 +4272,13 @@ int main(int argc, char** argv) {
                       << std::endl;
 #endif
             ripser<sparse_distance_matrix>(sparse_distance_matrix(std::move(dist), threshold),
-                                           dim_max, threshold, ratio, ripser_mode)
+                                           dim_max, threshold, ratio, ripser_mode, separator_pos)
                     .compute_barcodes();
         } else {
 #ifdef COUNTING
             std::cout << "distance matrix with " << dist.size() << " points" << std::endl;
 #endif
-            ripser<compressed_lower_distance_matrix>(std::move(dist), dim_max, threshold, ratio, ripser_mode).compute_barcodes();
+            ripser<compressed_lower_distance_matrix>(std::move(dist), dim_max, threshold, ratio, ripser_mode, separator_pos).compute_barcodes();
         }
     }
     sw.stop();
