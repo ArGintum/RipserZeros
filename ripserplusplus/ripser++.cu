@@ -2205,7 +2205,7 @@ public:
                             std::cout << " [" << diameter << "," << death << ")" << std::endl
                                       << std::flush;
 #endif
-                            birth_death_coordinate barcode = {diameter - 1, death - 1};
+                            birth_death_coordinate barcode = {diameter - distance_offset, death - distance_offset};
                             list_of_barcodes[dim].push_back(barcode);
 				
 			    get_simplex_vertices(column_to_reduce.index, dim, n, birth_verices.rbegin());
