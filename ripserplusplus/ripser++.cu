@@ -1,6 +1,6 @@
 /*
  Ripser++: accelerated Vietoris-Rips persistence barcodes computation with GPU
-
+ 
  MIT License
 
  Copyright (c) 2019, 2020 Simon Zhang, Mengbai Xiao, Hao Wang
@@ -1922,7 +1922,7 @@ public:
 					list_of_barcodes_simplices[0].push_back({{vertices_of_edge[1]}, vertices_of_edge});
 				}
                 dset.link(u, v);
-            } else if (ripser_mode == VANILLA || (ripser_mode == MTD && e.diameter > 0 && vertices_of_edge[0] < separator_pos) || (ripser_mode == RTD && vertices_of_edge[0] >= mid)) {
+            } else if (ripser_mode == VANILLA || (ripser_mode == MTD && e.diameter > 0 && vertices_of_edge[1] < separator_pos) || (ripser_mode == RTD && vertices_of_edge[0] >= mid)) {
                 columns_to_reduce.push_back(e);
             }
         }
@@ -2438,7 +2438,7 @@ void ripser<compressed_lower_distance_matrix>::gpu_compute_dim_0_pairs(std::vect
 				list_of_barcodes[0].push_back(barcode);
 				list_of_barcodes_simplices[0].push_back({{vertices_of_edge[1]}, vertices_of_edge});
 			}
-        } else if (ripser_mode == VANILLA || (ripser_mode == MTD && e.diameter > 0 && vertices_of_edge[0] < separator_pos) || (ripser_mode == RTD && vertices_of_edge[0] >= mid)) {
+        } else if (ripser_mode == VANILLA || (ripser_mode == MTD && e.diameter > 0 && vertices_of_edge[1] < separator_pos) || (ripser_mode == RTD && vertices_of_edge[0] >= mid)) {
             columns_to_reduce.push_back(e);
         }
     }
@@ -2511,7 +2511,7 @@ void ripser<sparse_distance_matrix>::gpu_compute_dim_0_pairs(std::vector<struct 
 
         if (u != v) {
             dset.link(u, v);
-        } else if (ripser_mode == VANILLA || (ripser_mode == MTD && e.diameter > 0 && vertices_of_edge[0] < separator_pos) || (ripser_mode == RTD && vertices_of_edge[0] >= mid)) {
+        } else if (ripser_mode == VANILLA || (ripser_mode == MTD && e.diameter > 0 && vertices_of_edge[1] < separator_pos) || (ripser_mode == RTD && vertices_of_edge[0] >= mid)) {
             columns_to_reduce.push_back(e);
         }
     }
