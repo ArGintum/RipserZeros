@@ -1,3 +1,4 @@
+
 from __future__ import print_function
 import numpy as np
 import scipy.sparse as sps
@@ -6,6 +7,7 @@ import math
 import sys
 import re
 import os
+from copy import deepcopy
 
 class Birth_death_coordinate(ctypes.Structure):
     """
@@ -175,7 +177,7 @@ def Ripser_plusplus_Converter(prog, arguments, file_name, file_format, computati
 
         barcodes_dict = {}
         simplexes_dict = {}
-        
+
         res = prog.run_main(len(arguments), arguments, user_matrix, num_entries, num_rows, num_columns)   
 
         for dim in range(res.num_dimensions):
@@ -183,6 +185,7 @@ def Ripser_plusplus_Converter(prog, arguments, file_name, file_format, computati
             simplexes_dict[dim] = [[np.array([res.set_of_pairs[dim].barcodes[simp].birth[coord] for coord in range(res.set_of_pairs[dim].barcodes[simp].dim + 1)]),
                                    np.array([res.set_of_pairs[dim].barcodes[simp].death[coord] for coord in range(res.set_of_pairs[dim].barcodes[simp].dim + 2)])]
                                    for simp in range(res.set_of_pairs[dim].num_barcodes)]
+
         return {'dgms': barcodes_dict, 'pairs': simplexes_dict}        
 
     return
@@ -229,6 +232,7 @@ def distance_matrix_user_matrix(user_matrix, computational_mode):
         return
     
     if computational_mode == "rtd":
+        user_matrix = deepcopy(user_matrix)
         user_matrix += 1
         user_matrix -= np.eye(user_matrix.shape[0])
         user_matrix[:user_matrix.shape[0] // 2, :user_matrix.shape[0] // 2] = 0
