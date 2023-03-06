@@ -62,8 +62,8 @@ def run(args, data = None):
             if i+1 >= len(params):
                 printHelpAndExit("Ripser++Python Error: Mode not Specified")
             else:
-                params[i+1] = ctypes.c_char_p(params[i+1].encode('utf-8'))
                 computational_mode = params[i+1]
+                params[i+1] = ctypes.c_char_p(params[i+1].encode('utf-8'))
                 i += 2
                 continue
         elif params[i]=="--threshold":
@@ -90,6 +90,7 @@ def run(args, data = None):
             printHelpAndExit("Invalid Ripser++ Option") 
     
     matrix = []
+    print(computational_mode)
     if data is not None and isinstance(data, str):
         file_name= ctypes.c_char_p(data.encode('utf-8'))
         matrix = None   
