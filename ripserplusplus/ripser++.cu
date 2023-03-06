@@ -1,6 +1,6 @@
 /*
  Ripser++: accelerated Vietoris-Rips persistence barcodes computation with GPU
- 
+
  MIT License
 
  Copyright (c) 2019, 2020 Simon Zhang, Mengbai Xiao, Hao Wang
@@ -1915,7 +1915,7 @@ public:
             index_t u= dset.find(vertices_of_edge[0]), v= dset.find(vertices_of_edge[1]);
 
             if (u != v) {
-				if (e.diameter != 0) {
+				if (e.diameter > distance_offset) {
 				    //Collect persistence pair
                     birth_death_coordinate barcode = {0, e.diameter - distance_offset};
                     list_of_barcodes[0].push_back(barcode);
@@ -2432,9 +2432,9 @@ void ripser<compressed_lower_distance_matrix>::gpu_compute_dim_0_pairs(std::vect
 
         if (u != v) {
             dset.link(u, v);
-			if (e.diameter != 0) {
+			if (e.diameter > distance_offset) {
 				//Collect persistence pair
-				birth_death_coordinate barcode = {0, e.diameter};
+				birth_death_coordinate barcode = {0, e.diameter - distance_offset};
 				list_of_barcodes[0].push_back(barcode);
 				list_of_barcodes_simplices[0].push_back({{vertices_of_edge[1]}, vertices_of_edge});
 			}
