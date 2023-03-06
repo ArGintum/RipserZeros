@@ -1917,7 +1917,7 @@ public:
             if (u != v) {
 				if (e.diameter != 0) {
 				    //Collect persistence pair
-                    birth_death_coordinate barcode = {0, e.diameter};
+                    birth_death_coordinate barcode = {0, e.diameter - distance_offset};
                     list_of_barcodes[0].push_back(barcode);
 					list_of_barcodes_simplices[0].push_back({{vertices_of_edge[1]}, vertices_of_edge});
 				}
