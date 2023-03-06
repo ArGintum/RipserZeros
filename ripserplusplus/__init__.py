@@ -90,7 +90,6 @@ def run(args, data = None):
             printHelpAndExit("Invalid Ripser++ Option") 
     
     matrix = []
-    print(computational_mode)
     if data is not None and isinstance(data, str):
         file_name= ctypes.c_char_p(data.encode('utf-8'))
         matrix = None   
