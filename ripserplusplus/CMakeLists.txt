@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.2)
 project(ripser++)
 
 #for Ubuntu users, see: https://github.com/espressomd/espresso/issues/3654 for lowering the gcc version for compatibility with CUDA
-find_package(CUDA 7 REQUIRED)
+find_package(CUDA 7 < REQUIRED)
 
 #set(CMAKE_BUILD_TYPE "Debug")
 set(CMAKE_BUILD_TYPE "Release")
@@ -12,15 +12,15 @@ INCLUDE(CheckCXXSourceCompiles)
 include_directories(include)
 
 add_compile_definitions(PRINT_PERSISTENCE_PAIRS)
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message("Debug mode")
     #set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode;arch=compute_35,code=sm_35;-gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_52,code=sm_52;-gencode;arch=compute_52,code=compute_52;-g;-G;-Xcompiler;-ggdb;-std=c++11)#manually specify
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-g;-G;-Xcompiler;-ggdb;-std=c++11)
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-g;-G;-Xcompiler;-ggdb;-std=c++14)
 else()
     #set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode;arch=compute_35,code=sm_35;-gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_52,code=sm_52;-gencode;arch=compute_52,code=compute_52;-gencode;arch=compute_70,code=compute_70;-O3;-Xcompiler;-fopenmp;-Xcompiler;-Ofast;-w;-DNDEBUG;-std=c++11)
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3;-Xcompiler;-fopenmp;-Xcompiler;-Ofast;-w;-DNDEBUG;-std=c++11)
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3;-Xcompiler;-fopenmp;-Xcompiler;-Ofast;-w;-DNDEBUG;-std=c++14)
 endif()
 
 include(FindCUDA)
@@ -60,7 +60,7 @@ To use a different compiler, pass it to cmake in the variable CMAKE_CXX_COMPILER
 
 ")
 endif()
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 add_library(phmap STATIC include/phmap_interface/phmap_interface.cpp)
 
