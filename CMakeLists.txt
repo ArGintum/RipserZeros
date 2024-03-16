@@ -1,14 +1,16 @@
+message("entered cmake")
 cmake_minimum_required(VERSION 3.2)
 project(pyripser++)
 
-find_package(CUDA 7 REQUIRED)
-
+find_package(CUDA 7 < REQUIRED)
+message("Cuda found")
 #set(CMAKE_BUILD_TYPE "Debug")
 set(CMAKE_BUILD_TYPE "Release")
 
 INCLUDE(CheckCXXSourceCompiles)
 
 include_directories(ripserplusplus/include)
+message("included directories(ripserplusplus/include)")
 
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
