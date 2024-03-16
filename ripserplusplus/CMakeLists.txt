@@ -1,8 +1,11 @@
 cmake_minimum_required(VERSION 3.2)
 project(ripser++)
 
+message("1")
+
 #for Ubuntu users, see: https://github.com/espressomd/espresso/issues/3654 for lowering the gcc version for compatibility with CUDA
 find_package(CUDA 7 < REQUIRED)
+message("cuda found")
 
 #set(CMAKE_BUILD_TYPE "Debug")
 set(CMAKE_BUILD_TYPE "Release")
@@ -10,7 +13,7 @@ set(CMAKE_BUILD_TYPE "Release")
 INCLUDE(CheckCXXSourceCompiles)
 
 include_directories(include)
-
+message("include linked")
 add_compile_definitions(PRINT_PERSISTENCE_PAIRS)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 
@@ -24,6 +27,8 @@ else()
 endif()
 
 include(FindCUDA)
+message("include cuda")
+
 set(CUDA_ARCH_LIST Auto CACHE STRING
         "List of CUDA architectures (e.g. Pascal, Volta, etc) or \
 compute capability versions (6.1, 7.0, etc) to generate code for. \
@@ -61,6 +66,7 @@ To use a different compiler, pass it to cmake in the variable CMAKE_CXX_COMPILER
 ")
 endif()
 set(CMAKE_CXX_STANDARD 14)
+message("CMAKE_CXX_STANDARD")
 
 add_library(phmap STATIC include/phmap_interface/phmap_interface.cpp)
 
