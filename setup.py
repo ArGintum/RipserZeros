@@ -41,11 +41,9 @@ class build_ext(build_ext_orig):
         super().run()
 
     def build_cmake(self, ext):
-        print("run build_cmake")
 
         cwd = pathlib.Path().absolute()
         ##print(cwd)
-        print("cwd got")
 
         # these dirs will be created in build_py, so if you don't have
         # any python sources to bundle, the dirs will be missing
@@ -76,7 +74,7 @@ class build_ext(build_ext_orig):
         # Troubleshooting: if fail on line above then delete all possible
         # temporary CMake files including "CMakeCache.txt" in top level dir.
         os.chdir(str(cwd))
-print("run setup")
+
 setup(
     name="ripserplusplus",
     version="1.0.9",
