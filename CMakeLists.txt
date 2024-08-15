@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.2)
 project(pyripser++)
 
-find_package(CUDA 7 < REQUIRED)
+find_package(CUDA 7 REQUIRED)
 
 #set(CMAKE_BUILD_TYPE "Debug")
 set(CMAKE_BUILD_TYPE "Release")
